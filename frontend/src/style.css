@@ -61,6 +61,7 @@
 .market-list-empty strong{font-size:11px;color:#647e9c}
 .market-list-empty span{font-size:10px}
 .market-panel-foot{display:flex;justify-content:space-between;gap:8px;margin-top:auto;padding:12px 17px;border-top:1px solid #edf1f6;color:#a0afc1;font-size:9px}
+.market-load-more{display:block;width:calc(100% - 24px);height:38px;margin:10px 12px 14px;border:1px solid #dce6f2;border-radius:6px;background:#f6f9fd;color:#41658f;font-size:11px;font-weight:700}.market-load-more:hover{border-color:#a9c4e5;background:#edf4fd}.market-load-more span{margin-left:7px;color:#91a4ba;font-size:9px;font-weight:600}
 @media(max-width:1180px){.main-grid{grid-template-columns:minmax(0,1fr)}.market-list{height:420px;max-height:none;min-height:0}}
 @media(max-width:760px){.market-panel-title{padding:18px 14px 13px}.market-tabs{padding:0 14px}.market-filters{padding:11px 10px}.market-list-head{padding:0 10px}.market-row{padding:0 10px}.market-panel-foot{padding:12px 11px}.market-list{height:380px}}
 @media(max-width:430px){.market-list-head{grid-template-columns:27px minmax(0,1fr) 74px 68px}.market-row{grid-template-columns:27px minmax(0,1fr)}.market-row-select{grid-template-columns:minmax(0,1fr) 74px 68px}.market-row-name{gap:5px}.market-row-name .market-icon{width:23px;height:23px}.market-row-price,.market-row-change{font-size:10px}.market-list-head button{font-size:9px}.market-list-head button small{display:none}.market-category{width:94px}}

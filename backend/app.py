@@ -20,6 +20,7 @@ from zoneinfo import ZoneInfo
 import httpx
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 
 BASE = "https://poe.ninja/poe2/api/economy"
@@ -913,6 +914,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="PoE2 Chart API", lifespan=lifespan)
+app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
                    allow_methods=["GET", "POST"], allow_headers=["*"])
 
