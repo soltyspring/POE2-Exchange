@@ -171,3 +171,15 @@
 .exchange-overlay .exchange-foot>span small{color:#777d7f;font-size:9px}
 .exchange-overlay .exchange-foot button:disabled{opacity:.45;cursor:default}
 @media(max-width:900px){.exchange-result-count,.exchange-search kbd{display:none}}
+/* 콘텐츠 보상 전체화면 */
+.reward-drawer{inset:0;width:100vw;height:100vh;display:grid;grid-template-columns:230px minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;border:0;box-shadow:none;background:#0f1722}
+.reward-head{grid-column:1/3;grid-row:1;padding:18px 26px}
+.reward-head h2{font-size:22px}.reward-head p{font-size:12px}
+.reward-tabs{grid-column:1;grid-row:2/4;display:flex;flex-direction:column;gap:5px;padding:14px 10px;overflow-y:auto;border-right:1px solid #29405f;border-bottom:0;background:#101b29}
+.reward-tabs button{min-height:54px;padding:9px 12px}.reward-tabs strong{font-size:13px}.reward-tabs small{font-size:10px}
+.reward-summary{grid-column:2;grid-row:2;padding:16px 24px 12px}.reward-summary span{font-size:19px}.reward-summary strong{font-size:12px}.reward-summary small{font-size:10px}
+.reward-list{grid-column:2;grid-row:3;display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));align-content:start;gap:8px;padding:12px 20px 22px;background:radial-gradient(circle at 50% 0,#1b2b3e,#0d1723 70%)}
+.reward-item{min-height:66px;border:1px solid #213650;border-radius:4px;padding:8px 12px}.reward-item:hover{border-color:#4d79aa}.reward-name strong{font-size:13px}.reward-value strong{font-size:14px}
+.reward-foot{grid-column:1/3;grid-row:4;padding:12px 24px;font-size:10px}
+@media(max-width:760px){.reward-drawer{grid-template-columns:130px minmax(0,1fr)}.reward-head{padding:14px 16px}.reward-head p{display:none}.reward-tabs{padding:8px 6px}.reward-tabs button{padding:7px 8px}.reward-tabs small{display:none}.reward-summary{padding:12px}.reward-list{grid-template-columns:1fr;padding:8px}.reward-tier{display:none}.reward-item{grid-template-columns:20px 34px minmax(0,1fr) auto;padding:6px}.reward-item .market-icon{width:32px;height:32px}.reward-foot{padding:9px 12px}.reward-foot>span{display:none}}
+
