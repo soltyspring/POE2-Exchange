@@ -1,0 +1,23 @@
+[Unit]
+Description=POE2 market history collector and API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/POE2-Exchange/backend
+EnvironmentFile=-/home/ubuntu/POE2-Exchange/.env
+Environment=POE_DB_PATH=/var/lib/poe2-market/prices.sqlite3
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/home/ubuntu/POE2-Exchange/backend/.venv/bin/python -m uvicorn app:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=10
+StateDirectory=poe2-market
+StateDirectoryMode=0750
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
