@@ -60,6 +60,20 @@ curl http://127.0.0.1:8000/api/health
 
 서비스는 서버 내부의 `127.0.0.1:8000`에만 바인딩합니다. 개인 PC에서 원격 DB를 조회할 때는 SSH 포트 포워딩을 사용하세요. 배포 후 코드를 갱신할 때는 `git pull`, 의존성 설치, `sudo systemctl restart poe2-market` 순서로 진행합니다.
 
+로컬 화면을 우분투 데이터에 연결하려면 SSH 터널을 연 뒤 프런트엔드를 다시 실행합니다. 서버 주소와 키 경로는 본인 환경에 맞게 바꿉니다.
+
+```powershell
+ssh -N -L 18000:127.0.0.1:8000 -i <키 경로> ubuntu@<서버 주소>
+```
+
+다른 터미널에서:
+
+```powershell
+$env:POE_API_PROXY_TARGET = "http://127.0.0.1:18000"
+cd frontend
+npm run dev
+```
+
 ## API
 
 - `GET /api/leagues`
