@@ -36,7 +36,7 @@ exec /usr/bin/flock -n "$runtime/deploy.lock" sh -c '
   npm ci --silent
   npm run build
 
-  pkill -f "$repo/backend/.venv/bin/python -m uvicorn app:app" || true
+  pkill -f "[u]vicorn app:app --host 127.0.0.1 --port 18080" || true
   sleep 1
   nohup "$repo/deploy/run_collector.sh" >> "$runtime/collector.log" 2>&1 </dev/null &
   printf "%s\n" "$target" > "$runtime/deployed_commit"
