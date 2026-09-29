@@ -20,6 +20,9 @@ def verify():
             MIN(h.price_exalted),MAX(h.price_exalted) FROM external_price_history h
             JOIN market_keys k ON k.id=h.market_key
             WHERE k.league='Forbidden Rites' AND k.market_id='exchange:Currency:divine'""").fetchone()
+        official_hours = db.execute("SELECT COUNT(*),MIN(hour_start),MAX(hour_start) FROM official_exchange_hours").fetchone()
+        official_volume = db.execute("""SELECT league,market_id,COUNT(*),SUM(volume_item),MAX(hour_start)
+            FROM official_exchange_volume GROUP BY league,market_id""").fetchall()
     now = int(time.time())
     result = {
         "now": now,
@@ -31,6 +34,11 @@ def verify():
                              for r in history],
         "divine_history": dict(rows=divine[0], first_at=divine[1], last_at=divine[2],
                                min_price=divine[3], max_price=divine[4]),
+        "official_exchange": {
+            "completed_hours": official_hours[0], "first_hour": official_hours[1],
+            "last_hour": official_hours[2],
+            "mapped_pairs": [dict(league=r[0], market_id=r[1], hours=r[2],
+                                  traded_items=r[3], last_hour=r[4]) for r in official_volume]},
     }
     assert all(row["rows"] > 0 for row in result["snapshots"])
     assert all(row["min_price"] > 0 and row["last_at"] <= now for row in result["external_history"])

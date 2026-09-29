@@ -38,6 +38,7 @@ npm run dev
 - 관심 목록은 브라우저 localStorage에 저장됩니다.
 - 아이템명과 베이스 타입은 PoE2 GGPK에서 추출한 한국어 표시명 사전으로 표시합니다. 앱 시작 시 `data/item_names_kr.json`과 `data/unique_names_kr.json`에 캐시하며, 한국어 명칭이 없는 새 항목만 원문으로 남깁니다.
 - 화폐 교환 아이템을 선택하면 POE2Scout의 기존 가격 이력을 별도 참고 카드로 보여줍니다. 이는 1분봉에 섞지 않습니다.
+- GGG의 [공식 PoE2 Currency Exchange 공개 API](https://www.pathofexile.com/developer/docs/reference#currencyexchange)에서 완료된 시간의 교환량을 저장합니다. 신성·카오스·소멸 오브와 엑잘티드 오브의 검증된 통화쌍을 요일·시간 화면의 `공식 거래량` 탭에 표시합니다. 숫자는 아이템 개수이며 거래 건수가 아닙니다. 과거 28일을 분당 최대 2시간씩 천천히 보충하고 새로 완료된 시간도 수집합니다.
 - 선택적으로 Trade2 매물 호가를 조회할 수 있습니다. Trade2는 GGG의 지원 대상 개발자 API가 아닌 거래 웹사이트 내부 경로입니다. `POE_TRADE2_LIVE=1`로 명시적으로 켠 경우에만 주요 통화의 매물 중앙값을 별도 출처로 표시하고, 그 관측 기록은 `live_observations`에 분리해 저장합니다. 매물 호가는 체결가가 아니며, 이 기능은 웹사이트 변경이나 요청 제한으로 중단될 수 있습니다.
 
 설정: `POE_DEFAULT_LEAGUE`로 시작 리그, `POE_MARKET_POLL_SECONDS`로 전체 시세 요청 간격(기본 900초), `POE_HISTORY_SNAPSHOT_SECONDS`로 전체 시세 저장 간격(기본 900초), `POE_SELECTED_POLL_SECONDS`로 선택 분류 요청 간격(기본 60초), `POE_TRACKED_ACTIVE_SECONDS`로 열어 본 아이템의 추가 1분 기록 기간(기본 24시간), `POE_DB_PATH`로 SQLite 경로를 변경할 수 있습니다.
@@ -58,6 +59,8 @@ curl http://127.0.0.1:18080/api/health
 ```
 
 cron 등록 후 최대 1분 이내에 수집기가 시작됩니다. 코드 갱신은 `git pull`과 의존성 설치 후 수집기 프로세스를 재시작합니다. 과거 가격은 `cd backend && .venv/bin/python backfill_scout.py --league 'Forbidden Rites'`로 별도 출처 테이블에 가져옵니다. `backend/verify_data.py`는 누적 건수와 시각을 읽기 전용으로 확인합니다. POE2Scout 응답은 체결 건별 로그가 아닌 과거 가격 관측값이며, 데이터가 충분한 화폐에 한해 요일·시간대 분석에 사용합니다.
+
+공식 교환 이력의 최근 24시간을 즉시 채우려면 `cd backend && .venv/bin/python backfill_official.py --hours 24`를 실행합니다. `POE_OFFICIAL_BACKFILL_DAYS`로 자동 과거 수집 범위(기본 28일)를 바꿀 수 있습니다. 공식 API는 인증 없이 접근할 수 있지만 현재 진행 중인 시간은 제공하지 않습니다.
 
 로컬 화면을 우분투 데이터에 연결하려면 SSH 터널을 연 뒤 프런트엔드를 다시 실행합니다. 서버 주소와 키 경로는 본인 환경에 맞게 바꿉니다.
 

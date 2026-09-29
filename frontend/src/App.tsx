@@ -26,7 +26,9 @@ type LiveQuote = {source: string; price_exalted: number; price_divine: number | 
 type League = {id: string; name: string}
 type MarketSort = 'name' | 'price' | 'change'
 type SeasonalityCell = {weekday: number; hour: number; relative_percent: number; days: number}
-type Seasonality = {timezone: string; lookback_days: number; sample_count: number; observed_days: number; first_sample_at: number | null; last_sample_at: number | null; source: 'poe.ninja' | 'poe2scout'; cells: SeasonalityCell[]; best_slot: SeasonalityCell | null}
+type OfficialVolumeCell = {weekday: number; hour: number; median_volume_item: number; hours: number}
+type OfficialVolume = {supported: boolean; source: string; sample_count: number; first_hour: number | null; last_hour: number | null; total_volume_item: number; cells: OfficialVolumeCell[]}
+type Seasonality = {timezone: string; lookback_days: number; sample_count: number; observed_days: number; first_sample_at: number | null; last_sample_at: number | null; source: 'poe.ninja' | 'poe2scout'; cells: SeasonalityCell[]; best_slot: SeasonalityCell | null; official_volume: OfficialVolume}
 const weekdays = ['월', '화', '수', '목', '금', '토', '일']
 const intervals = ['1m', '5m', '1h', '1d'] as const
 type Interval = typeof intervals[number]
@@ -158,6 +160,7 @@ export default function App() {
   const [historyDays, setHistoryDays] = useState<28 | 56 | 84>(56)
   const [seasonalityData, setSeasonalityData] = useState<Seasonality | null>(null)
   const [seasonalityLoading, setSeasonalityLoading] = useState(false)
+  const [heatMetric, setHeatMetric] = useState<'price' | 'volume'>('price')
   const [favorites, setFavorites] = useState<string[]>(initialFavorites)
   const [unit, setUnit] = useState<'divine'|'exalted'>('exalted')
   const [scout, setScout] = useState<Scout | null>(null)
@@ -334,6 +337,9 @@ export default function App() {
   const currencyMarkets = data?.markets.filter(m => ['exchange:Currency:divine', 'exchange:Currency:exalted', 'exchange:Currency:chaos'].includes(m.id)) || []
   const heatCells = new Map(seasonalityData?.cells.map(cell => [`${cell.weekday}:${cell.hour}`, cell]) || [])
   const heatScale = Math.max(0.5, ...((seasonalityData?.cells || []).map(cell => Math.abs(cell.relative_percent))))
+  const volumeCells = new Map(seasonalityData?.official_volume.cells.map(cell => [`${cell.weekday}:${cell.hour}`, cell]) || [])
+  const volumeScale = Math.max(1, ...((seasonalityData?.official_volume.cells || []).map(cell => cell.median_volume_item)))
+  const showVolume = heatMetric === 'volume' && !!seasonalityData?.official_volume.supported
 
   return <div className="app-shell">
     <aside className="sidebar">
@@ -397,10 +403,18 @@ export default function App() {
           </section>
         </div>
         <section className="panel seasonality-panel" aria-label="요일별 매수 시간 분석">
-          <div className="seasonality-heading"><div><div className="eyebrow small">BUYING WINDOW</div><h2>요일·시간대 가격 패턴</h2><p>{selected?.name || '아이템'}의 가격을 각 날짜의 중앙값과 비교합니다. 한국 시간 기준입니다.</p></div><div className="seasonality-period" aria-label="분석 기간">{([28, 56, 84] as const).map(days => <button key={days} className={historyDays === days ? 'active' : ''} onClick={() => setHistoryDays(days)}>{days / 7}주</button>)}</div></div>
-          <div className="seasonality-summary"><div><span>{seasonalityData?.source === 'poe2scout' ? 'POE2Scout 과거 가격 기록' : '저장된 전체 시장 관측'}</span><strong>{seasonalityData ? `${nfmt(seasonalityData.sample_count)}회 · ${seasonalityData.observed_days}일` : seasonalityLoading ? '불러오는 중' : '—'}</strong></div><div><span>상대적으로 저렴했던 시간</span><strong>{seasonalityData?.best_slot ? `${weekdays[seasonalityData.best_slot.weekday]}요일 ${String(seasonalityData.best_slot.hour).padStart(2, '0')}시 · ${changeText(seasonalityData.best_slot.relative_percent)}` : '분석을 위한 기록 누적 중'}</strong></div><div><span>분석 조건</span><strong>3주 이상 · 시간대별 3일 이상</strong></div></div>
-          <div className="heatmap-scroll"><div className="heatmap-grid"><div className="heatmap-corner">시각</div>{weekdays.map(day => <div key={day} className="heatmap-day">{day}요일</div>)}{Array.from({length: 24}, (_, hour) => <div className="heatmap-hour-row" key={hour}><div className="heatmap-hour">{String(hour).padStart(2, '0')}:00</div>{weekdays.map((day, weekday) => {const cell = heatCells.get(`${weekday}:${hour}`); const strength = cell ? Math.min(0.78, 0.08 + Math.abs(cell.relative_percent) / heatScale * 0.62) : 0; return <div key={`${day}:${hour}`} className={`heatmap-cell ${cell ? '' : 'empty'}`} title={cell ? `${day}요일 ${hour}시 · 일별 중앙값 대비 ${changeText(cell.relative_percent)} · ${cell.days}일 관측` : `${day}요일 ${hour}시 · 기록 없음`} style={cell ? {backgroundColor: cell.relative_percent < 0 ? `rgba(43, 105, 198, ${strength})` : `rgba(215, 68, 93, ${strength})`} : undefined}>{cell ? changeText(cell.relative_percent) : '—'}</div>})}</div>)}</div></div>
-          <div className="seasonality-note"><span><i className="heatmap-low"/>저렴 <i className="heatmap-high"/>비쌈 · 숫자는 해당 날짜 중앙값 대비 차이</span><span>{seasonalityData?.source === 'poe2scout' ? 'POE2Scout 과거 가격 기록' : '15분 관측 시세'} · 최근 기록 {seasonalityData?.last_sample_at ? new Date(seasonalityData.last_sample_at * 1000).toLocaleString('ko-KR') : '없음'} · 체결 시각이 아니며 미래 가격을 보장하지 않습니다</span></div>
+          <div className="seasonality-heading"><div><div className="eyebrow small">BUYING WINDOW</div><h2>요일·시간대 가격 패턴</h2><p>{selected?.name || '아이템'}의 가격과 공식 교환 거래량을 한국 시간 기준으로 봅니다.</p></div><div className="seasonality-controls"><div className="seasonality-period" aria-label="분석 자료"><button className={!showVolume ? 'active' : ''} onClick={() => setHeatMetric('price')}>가격 편차</button>{seasonalityData?.official_volume.supported && <button className={showVolume ? 'active' : ''} onClick={() => setHeatMetric('volume')}>공식 거래량</button>}</div><div className="seasonality-period" aria-label="분석 기간">{([28, 56, 84] as const).map(days => <button key={days} className={historyDays === days ? 'active' : ''} onClick={() => setHistoryDays(days)}>{days / 7}주</button>)}</div></div></div>
+          <div className="seasonality-summary"><div><span>{seasonalityData?.source === 'poe2scout' ? 'POE2Scout 과거 가격 기록' : '저장된 전체 시장 관측'}</span><strong>{seasonalityData ? `${nfmt(seasonalityData.sample_count)}회 · ${seasonalityData.observed_days}일` : seasonalityLoading ? '불러오는 중' : '—'}</strong></div><div><span>상대적으로 저렴했던 시간</span><strong>{seasonalityData?.best_slot ? `${weekdays[seasonalityData.best_slot.weekday]}요일 ${String(seasonalityData.best_slot.hour).padStart(2, '0')}시 · ${changeText(seasonalityData.best_slot.relative_percent)}` : '분석을 위한 기록 누적 중'}</strong></div><div><span>{seasonalityData?.official_volume.supported ? 'GGG 공식 교환량 · 선택 기간' : '분석 조건'}</span><strong>{seasonalityData?.official_volume.supported ? `${nfmt(seasonalityData.official_volume.total_volume_item)}개 · ${seasonalityData.official_volume.sample_count}시간` : '3주 이상 · 시간대별 3일 이상'}</strong></div></div>
+          <div className="heatmap-scroll"><div className="heatmap-grid"><div className="heatmap-corner">시각</div>{weekdays.map(day => <div key={day} className="heatmap-day">{day}요일</div>)}{Array.from({length: 24}, (_, hour) => <div className="heatmap-hour-row" key={hour}><div className="heatmap-hour">{String(hour).padStart(2, '0')}:00</div>{weekdays.map((day, weekday) => {
+            const cell = heatCells.get(`${weekday}:${hour}`)
+            const volume = volumeCells.get(`${weekday}:${hour}`)
+            const strength = cell ? Math.min(0.78, 0.08 + Math.abs(cell.relative_percent) / heatScale * 0.62) : 0
+            const volumeStrength = volume ? Math.min(0.85, 0.12 + Math.sqrt(volume.median_volume_item / volumeScale) * 0.68) : 0
+            return showVolume
+              ? <div key={`${day}:${hour}`} className={`heatmap-cell ${volume ? '' : 'empty'}`} title={volume ? `${day}요일 ${hour}시 · 공식 교환량 중간값 ${nfmt(volume.median_volume_item)}개 · ${volume.hours}시간 관측` : `${day}요일 ${hour}시 · 공식 기록 없음`} style={volume ? {backgroundColor: `rgba(43, 105, 198, ${volumeStrength})`} : undefined}>{volume ? nfmt(volume.median_volume_item) : '—'}</div>
+              : <div key={`${day}:${hour}`} className={`heatmap-cell ${cell ? '' : 'empty'}`} title={cell ? `${day}요일 ${hour}시 · 일별 중앙값 대비 ${changeText(cell.relative_percent)} · ${cell.days}일 관측${volume ? ` · 공식 교환량 중간값 ${nfmt(volume.median_volume_item)}개` : ''}` : `${day}요일 ${hour}시 · 기록 없음`} style={cell ? {backgroundColor: cell.relative_percent < 0 ? `rgba(43, 105, 198, ${strength})` : `rgba(215, 68, 93, ${strength})`} : undefined}>{cell ? changeText(cell.relative_percent) : '—'}</div>
+          })}</div>)}</div></div>
+          <div className="seasonality-note"><span>{showVolume ? 'GGG 공식 시간별 교환량의 요일·시간 중간값 · 아이템 개수 기준' : <><i className="heatmap-low"/>저렴 <i className="heatmap-high"/>비쌈 · 숫자는 해당 날짜 중앙값 대비 차이</>}</span><span>{showVolume ? `공식 기록 최근 시간 ${seasonalityData?.official_volume.last_hour ? new Date(seasonalityData.official_volume.last_hour * 1000).toLocaleString('ko-KR') : '없음'} · 개별 체결 건수는 제공되지 않습니다` : `${seasonalityData?.source === 'poe2scout' ? 'POE2Scout 과거 가격 기록' : '15분 관측 시세'} · 최근 기록 ${seasonalityData?.last_sample_at ? new Date(seasonalityData.last_sample_at * 1000).toLocaleString('ko-KR') : '없음'} · 체결 시각이 아니며 미래 가격을 보장하지 않습니다`}</span></div>
         </section>
         <footer><span>POE2 MARKET · 전체 {marketCadence}분 / 선택 {selectedCadence}분 / 차트 1분 저장 {updated > 0 && `· 화면 확인 ${new Date(updated).toLocaleTimeString('ko-KR')}`}</span><span>데이터: <a href="https://poe.ninja/docs/api" target="_blank" rel="noreferrer">poe.ninja 공개 경제 API <ExternalLink size={12}/></a> · <a href="https://poe2scout.com" target="_blank" rel="noreferrer">POE2Scout 참고 가격 <ExternalLink size={12}/></a>{data?.trade2_live_enabled ? ' · 주요 통화 Trade2 매물 호가' : ''}</span>{sourceErrors.length > 0 && <span className="source-warning">{sourceErrors.length}개 분류 수집 오류 · 이전 데이터 표시 중</span>}</footer>
       </div>
