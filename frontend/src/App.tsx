@@ -186,11 +186,12 @@ function PriceChart({candles, loading, interval, seriesKey}: {candles: Candle[];
 
 function MarketIcon({market, size = 'normal'}: {market: Market; size?: 'normal' | 'large'}) {
   const [failed, setFailed] = useState(false)
-  useEffect(() => setFailed(false), [market.icon])
-  const showImage = !!market.icon && !failed
+  const iconUrl = `/api/market-icon/${market.id.split('/').map(encodeURIComponent).join('/')}?league=${encodeURIComponent(market.league)}`
+  useEffect(() => setFailed(false), [iconUrl])
+  const showImage = !failed
   return <span className={`market-icon ${size} ${showImage ? 'has-image' : 'fallback'}`}>
     {showImage
-      ? <img src={market.icon!} alt="" loading={size === 'large' ? 'eager' : 'lazy'} decoding="async" onError={() => setFailed(true)} />
+      ? <img src={iconUrl} alt="" loading={size === 'large' ? 'eager' : 'lazy'} decoding="async" onError={() => setFailed(true)} />
       : <Coins size={size === 'large' ? 24 : 18} aria-hidden="true"/>}
   </span>
 }

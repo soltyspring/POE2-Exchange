@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 import json
@@ -19,6 +20,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -79,6 +81,7 @@ LOCALIZATION_FILES = {
         "https://cdn.poe2db.tw/json/autocompletecb_kr.b6f7982de7b02190.json",
 }
 LOCALIZATION_DIR = ROOT / "data"
+ICON_CACHE_DIR = ROOT / "data" / "icon_cache"
 KOREAN_NAMES: dict[str, str] = {}
 LOGGER = logging.getLogger(__name__)
 
@@ -277,6 +280,47 @@ def normalized_icon(url: str | None) -> str | None:
     if url.startswith("/"):
         return "https://poe.ninja" + url
     return url if url.startswith("https://") else None
+
+
+async def cached_market_icon(league: str, market_id: str) -> Path:
+    """Fetch a market icon once and serve it from persistent local storage."""
+    cache_key = hashlib.sha256(f"{league}\0{market_id}".encode()).hexdigest()
+    existing = next(ICON_CACHE_DIR.glob(cache_key + ".*"), None) if ICON_CACHE_DIR.exists() else None
+    if existing:
+        return existing
+    with connect() as db:
+        market = db.execute("SELECT icon FROM markets WHERE league=? AND id=?", (league, market_id)).fetchone()
+    if market is None:
+        raise HTTPException(404, "Market not found")
+    icon_url = normalized_icon(market["icon"])
+    if not icon_url and market_id.startswith("exchange:"):
+        api_id = market_id.rsplit(":", 1)[-1]
+        metadata_url = (f"https://api.poe2scout.com/poe2/Leagues/{quote(league, safe='')}"
+                        f"/Currencies/{quote(api_id, safe='')}")
+        try:
+            metadata = await collector._get_with_backoff(metadata_url)
+            if metadata.status_code == 200:
+                icon_url = normalized_icon(metadata.json().get("IconUrl"))
+                if icon_url:
+                    with connect() as db:
+                        db.execute("UPDATE markets SET icon=? WHERE league=? AND id=?",
+                                   (icon_url, league, market_id))
+        except (httpx.HTTPError, ValueError):
+            icon_url = None
+    if not icon_url or urlsplit(icon_url).netloc not in {"web.poecdn.com", "poe.ninja"}:
+        raise HTTPException(404, "Market icon unavailable")
+    response = await collector._get_with_backoff(icon_url)
+    if response.status_code != 200 or not response.content:
+        raise HTTPException(502, "Market icon source unavailable")
+    content_type = response.headers.get("content-type", "").split(";", 1)[0]
+    suffix = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp",
+              "image/gif": ".gif", "image/svg+xml": ".svg"}.get(content_type)
+    if not suffix:
+        raise HTTPException(502, "Unsupported market icon format")
+    ICON_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    target = ICON_CACHE_DIR / (cache_key + suffix)
+    target.write_bytes(response.content)
+    return target
 
 
 def finite_positive(value):
@@ -990,6 +1034,12 @@ async def leagues():
         return await collector.get_leagues()
     except httpx.HTTPError as exc:
         raise HTTPException(502, f"League source unavailable: {exc}") from exc
+
+
+@app.get("/api/market-icon/{market_id:path}")
+async def market_icon(market_id: str, league: str = Query(min_length=1, max_length=120)):
+    path = await cached_market_icon(league, market_id)
+    return FileResponse(path, headers={"Cache-Control": "public, max-age=31536000, immutable"})
 
 
 @app.get("/api/markets")
