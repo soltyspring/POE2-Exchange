@@ -163,7 +163,7 @@ def init_db():
         );
         CREATE TABLE IF NOT EXISTS observations (
           league TEXT NOT NULL, market_id TEXT NOT NULL, minute INTEGER NOT NULL,
-          price_divine REAL NOT NULL, price_exalted REAL,
+          price_divine REAL NOT NULL, price_exalted REAL, price_chaos REAL,
           PRIMARY KEY (league, market_id, minute)
         );
         CREATE TABLE IF NOT EXISTS market_keys (
@@ -224,6 +224,8 @@ def init_db():
         observation_columns = {r["name"] for r in db.execute("PRAGMA table_info(observations)")}
         if "price_exalted" not in observation_columns:
             db.execute("ALTER TABLE observations ADD COLUMN price_exalted REAL")
+        if "price_chaos" not in observation_columns:
+            db.execute("ALTER TABLE observations ADD COLUMN price_chaos REAL")
         snapshot_columns = {r["name"] for r in db.execute("PRAGMA table_info(market_snapshots)")}
         if "league" in snapshot_columns:
             db.execute("ALTER TABLE market_snapshots RENAME TO market_snapshots_legacy")
@@ -380,12 +382,15 @@ def sample_prices():
     minute = int(time.time()) // 60 * 60
     with connect() as db:
         db.execute("""INSERT OR IGNORE INTO observations
-            (league,market_id,minute,price_divine,price_exalted)
+            (league,market_id,minute,price_divine,price_exalted,price_chaos)
             SELECT m.league,m.id,?,m.price_divine,
-              CASE WHEN ex.price_divine > 0 THEN m.price_divine/ex.price_divine ELSE NULL END
+              CASE WHEN ex.price_divine > 0 THEN m.price_divine/ex.price_divine ELSE NULL END,
+              CASE WHEN chaos.price_divine > 0 THEN m.price_divine/chaos.price_divine ELSE NULL END
             FROM tracked t JOIN markets m ON m.league=t.league AND m.id=t.market_id
             LEFT JOIN markets ex ON ex.league=m.league
               AND ex.id='exchange:Currency:exalted'
+            LEFT JOIN markets chaos ON chaos.league=m.league
+              AND chaos.id='exchange:Currency:chaos'
             WHERE t.last_viewed >= ?""", (minute, minute - TRACKED_ACTIVE_SECONDS))
         db.execute("DELETE FROM tracked WHERE last_viewed < ?",
                    (minute - TRACKED_ACTIVE_SECONDS,))
@@ -498,15 +503,32 @@ def official_volume_summary(league: str, market_id: str, since: int):
             "total_volume_item": sum(row["volume_item"] for row in rows), "cells": cells}
 
 
+def exalted_chaos_snapshots(db: sqlite3.Connection, league: str, since: int):
+    """Historical chaos received for one exalt, using same-bucket market snapshots."""
+    return db.execute("""SELECT ex.bucket_start, ex.price_divine/chaos.price_divine AS price
+        FROM market_snapshots ex
+        JOIN market_keys ex_key ON ex_key.id=ex.market_key
+        JOIN market_keys chaos_key ON chaos_key.league=ex_key.league
+          AND chaos_key.market_id='exchange:Currency:chaos'
+        JOIN market_snapshots chaos ON chaos.market_key=chaos_key.id
+          AND chaos.bucket_start=ex.bucket_start
+        WHERE ex_key.league=? AND ex_key.market_id='exchange:Currency:exalted'
+          AND ex.bucket_start>=? AND chaos.price_divine>0
+        ORDER BY ex.bucket_start""", (league, since)).fetchall()
+
+
 def seasonality(league: str, market_id: str, days: int, unit: str):
     """Compare each Seoul weekday/hour to that day's median price."""
     column = "price_exalted" if unit == "exalted" else "price_divine"
     since = int(time.time()) - days * 86400
     with connect() as db:
-        rows = db.execute(f"""SELECT s.bucket_start, s.{column} AS price FROM market_snapshots s
-            JOIN market_keys k ON k.id=s.market_key
-            WHERE k.league=? AND k.market_id=? AND s.bucket_start>=? AND s.{column}>0
-            ORDER BY bucket_start""", (league, market_id, since)).fetchall()
+        if unit == "chaos" and market_id == "exchange:Currency:exalted":
+            rows = exalted_chaos_snapshots(db, league, since)
+        else:
+            rows = db.execute(f"""SELECT s.bucket_start, s.{column} AS price FROM market_snapshots s
+                JOIN market_keys k ON k.id=s.market_key
+                WHERE k.league=? AND k.market_id=? AND s.bucket_start>=? AND s.{column}>0
+                ORDER BY bucket_start""", (league, market_id, since)).fetchall()
         source = "poe.ninja"
         own_span_days = ((rows[-1]["bucket_start"] - rows[0]["bucket_start"]) / 86400) if len(rows) > 1 else 0
         if unit == "exalted" and (len(rows) < 100 or own_span_days < 21) and market_id.startswith("exchange:Currency:"):
@@ -939,8 +961,8 @@ async def markets(league: str = Query(min_length=1)):
 @app.get("/api/seasonality/{market_id:path}")
 def market_seasonality(market_id: str, league: str = Query(min_length=1),
                        days: int = Query(default=56, ge=7, le=365), unit: str = "exalted"):
-    if unit not in {"exalted", "divine"}:
-        raise HTTPException(400, "unit must be exalted or divine")
+    if unit not in {"exalted", "divine"} and not (unit == "chaos" and market_id == "exchange:Currency:exalted"):
+        raise HTTPException(400, "Unsupported unit for this market")
     with connect() as db:
         exists = db.execute("SELECT 1 FROM markets WHERE league=? AND id=?",
                             (league, market_id)).fetchone()
@@ -955,10 +977,10 @@ async def candles(market_id: str, league: str = Query(min_length=1), interval: s
     seconds = {"1m": 60, "5m": 300, "1h": 3600, "1d": 86400}.get(interval)
     if seconds is None:
         raise HTTPException(400, "Unsupported interval")
-    if unit not in ("divine", "exalted"):
+    if unit not in ("divine", "exalted") and not (unit == "chaos" and market_id == "exchange:Currency:exalted"):
         raise HTTPException(400, "Unsupported unit")
     await collector.refresh_market(league, market_id)
-    live_quote = await collector.get_live_market_quote(league, market_id)
+    live_quote = await collector.get_live_market_quote(league, market_id) if unit != "chaos" else None
     if live_quote:
         await asyncio.to_thread(save_live_observation, league, market_id, live_quote)
     with connect() as db:
@@ -972,16 +994,30 @@ async def candles(market_id: str, league: str = Query(min_length=1), interval: s
             (league, market_id, int(time.time())))
         ex = db.execute("""SELECT price_divine FROM markets WHERE league=?
             AND id='exchange:Currency:exalted'""", (league,)).fetchone()
+        chaos = db.execute("""SELECT price_divine FROM markets WHERE league=?
+            AND id='exchange:Currency:chaos'""", (league,)).fetchone()
         price_exalted = market["price_divine"] / ex[0] if ex and ex[0] > 0 else None
+        price_chaos = market["price_divine"] / chaos[0] if chaos and chaos[0] > 0 else None
         db.execute("""INSERT OR IGNORE INTO observations
-            (league,market_id,minute,price_divine,price_exalted) VALUES (?,?,?,?,?)""",
-            (league, market_id, minute, market["price_divine"], price_exalted))
+            (league,market_id,minute,price_divine,price_exalted,price_chaos) VALUES (?,?,?,?,?,?)""",
+            (league, market_id, minute, market["price_divine"], price_exalted, price_chaos))
         column = "price_divine" if unit == "divine" else "price_exalted"
-        use_live = bool(live_quote and (unit == "exalted" or live_quote.get("price_divine")))
+        use_live = bool(unit != "chaos" and live_quote and (unit == "exalted" or live_quote.get("price_divine")))
         table = "live_observations" if use_live else "observations"
-        data = [dict(row) for row in db.execute(f"""SELECT minute, {column} AS price FROM {table}
-            WHERE league=? AND market_id=? ORDER BY minute DESC LIMIT ?""",
-            (league, market_id, min(20000, limit * (seconds // 60))))]
+        if unit == "chaos":
+            minute_rows = [dict(row) for row in db.execute("""SELECT minute,price_chaos AS price
+                FROM observations WHERE league=? AND market_id=? AND price_chaos>0
+                ORDER BY minute DESC LIMIT ?""", (league, market_id, min(20000, limit * max(1, seconds // 60))))]
+            since = max(0, int(time.time()) - max(seconds * limit * 2, HISTORY_SNAPSHOT_SECONDS * limit))
+            snapshot_rows = [{"minute": row["bucket_start"], "price": row["price"]}
+                             for row in exalted_chaos_snapshots(db, league, since)]
+            by_minute = {row["minute"]: row for row in snapshot_rows}
+            by_minute.update({row["minute"]: row for row in minute_rows})
+            data = sorted(by_minute.values(), key=lambda row: row["minute"], reverse=True)[:min(50000, limit * max(1, seconds // 60))]
+        else:
+            data = [dict(row) for row in db.execute(f"""SELECT minute, {column} AS price FROM {table}
+                WHERE league=? AND market_id=? ORDER BY minute DESC LIMIT ?""",
+                (league, market_id, min(20000, limit * (seconds // 60))))]
         state = db.execute("""SELECT category,fetched_at,attempted_at,error,etag,last_modified
             FROM fetch_state WHERE league=? AND category=?""",
             (league, market["category"])).fetchone()
