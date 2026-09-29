@@ -618,7 +618,7 @@ def statistical_market_summary(name: str, data: dict) -> dict:
 async def ai_market_summary(name: str, data: dict) -> dict:
     fallback = statistical_market_summary(name, data)
     if not AI_API_KEY: return fallback
-    payload = {"model": AI_MODEL, "temperature": 0.2, "max_tokens": 260, "system": "POE2 시세 통계를 한국어 3~4문장으로 요약한다. 최고가·저가 경향, 거래량 집중 시간, 표본 한계를 설명하고 가격을 예측하지 않는다.", "messages": [{"role": "user", "content": json.dumps({"item": name, "statistics": fallback, "data": data}, ensure_ascii=False)}]}
+    payload = {"model": AI_MODEL, "temperature": 0.2, "max_tokens": 420, "system": "POE2 시세 통계를 한국어 3~4문장, 350자 이내로 요약한다. 최고가·저가 경향, 거래량 집중 시간, 표본 한계를 설명하고 가격을 예측하지 않는다. 제목, Markdown, 목록, 굵은 글씨 기호 없이 일반 문장만 출력한다.", "messages": [{"role": "user", "content": json.dumps({"item": name, "statistics": fallback, "data": data}, ensure_ascii=False)}]}
     try:
         async with httpx.AsyncClient(timeout=20) as client:
             response = await client.post(AI_API_URL, headers={"x-api-key": AI_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"}, json=payload)
