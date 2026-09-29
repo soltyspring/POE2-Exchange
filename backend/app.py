@@ -525,18 +525,18 @@ def official_volume_summary(league: str, market_id: str, since: int):
             "total_volume_item": sum(row["volume_item"] for row in rows), "cells": cells}
 
 
-def exalted_chaos_snapshots(db: sqlite3.Connection, league: str, since: int):
-    """Historical chaos received for one exalt, using same-bucket market snapshots."""
-    return db.execute("""SELECT ex.bucket_start, ex.price_divine/chaos.price_divine AS price
-        FROM market_snapshots ex
-        JOIN market_keys ex_key ON ex_key.id=ex.market_key
-        JOIN market_keys chaos_key ON chaos_key.league=ex_key.league
+def currency_chaos_snapshots(db: sqlite3.Connection, league: str, market_id: str, since: int):
+    """Historical chaos received for one currency item, using same-bucket snapshots."""
+    return db.execute("""SELECT item.bucket_start, item.price_divine/chaos.price_divine AS price
+        FROM market_snapshots item
+        JOIN market_keys item_key ON item_key.id=item.market_key
+        JOIN market_keys chaos_key ON chaos_key.league=item_key.league
           AND chaos_key.market_id='exchange:Currency:chaos'
         JOIN market_snapshots chaos ON chaos.market_key=chaos_key.id
-          AND chaos.bucket_start=ex.bucket_start
-        WHERE ex_key.league=? AND ex_key.market_id='exchange:Currency:exalted'
-          AND ex.bucket_start>=? AND chaos.price_divine>0
-        ORDER BY ex.bucket_start""", (league, since)).fetchall()
+          AND chaos.bucket_start=item.bucket_start
+        WHERE item_key.league=? AND item_key.market_id=?
+          AND item.bucket_start>=? AND chaos.price_divine>0
+        ORDER BY item.bucket_start""", (league, market_id, since)).fetchall()
 
 
 def seasonality(league: str, market_id: str, days: int, unit: str):
@@ -544,8 +544,8 @@ def seasonality(league: str, market_id: str, days: int, unit: str):
     column = "price_exalted" if unit == "exalted" else "price_divine"
     since = int(time.time()) - days * 86400
     with connect() as db:
-        if unit == "chaos" and market_id == "exchange:Currency:exalted":
-            rows = exalted_chaos_snapshots(db, league, since)
+        if unit == "chaos" and market_id in {"exchange:Currency:exalted", "exchange:Currency:divine"}:
+            rows = currency_chaos_snapshots(db, league, market_id, since)
         else:
             rows = db.execute(f"""SELECT s.bucket_start, s.{column} AS price FROM market_snapshots s
                 JOIN market_keys k ON k.id=s.market_key
@@ -596,6 +596,8 @@ def seasonality(league: str, market_id: str, days: int, unit: str):
 
 
 def statistical_market_summary(name: str, data: dict) -> dict:
+    last = ord(name[-1]) if name else 0
+    topic = "은" if 0xAC00 <= last <= 0xD7A3 and (last - 0xAC00) % 28 else "는"
     eligible = [cell for cell in data["cells"] if cell["days"] >= 3]
     highest = max(eligible, key=lambda cell: cell["relative_percent"]) if eligible else None
     lowest = min(eligible, key=lambda cell: cell["relative_percent"]) if eligible else None
@@ -604,7 +606,7 @@ def statistical_market_summary(name: str, data: dict) -> dict:
     days = ["월", "화", "수", "목", "금", "토", "일"]
     slot = lambda cell: f"{days[cell['weekday']]}요일 {cell['hour']:02d}시" if cell else "자료 없음"
     parts = []
-    if highest: parts.append(f"{name}은 {slot(highest)}에 일별 중앙값보다 {highest['relative_percent']:+.2f}% 높은 경향이 있습니다.")
+    if highest: parts.append(f"{name}{topic} {slot(highest)}에 일별 중앙값보다 {highest['relative_percent']:+.2f}% 높은 경향이 있습니다.")
     if lowest: parts.append(f"상대적으로 낮았던 때는 {slot(lowest)}로 {lowest['relative_percent']:+.2f}%였습니다.")
     if busiest: parts.append(f"공식 교환량은 {slot(busiest)}에 중간값 {busiest['median_volume_item']:,.0f}개로 가장 많았습니다.")
     if not parts: parts.append("요일·시간별 경향을 판단할 표본을 더 모으고 있습니다.")
@@ -1020,7 +1022,7 @@ async def markets(league: str = Query(min_length=1)):
 @app.get("/api/seasonality/{market_id:path}")
 def market_seasonality(market_id: str, league: str = Query(min_length=1),
                        days: int = Query(default=56, ge=7, le=365), unit: str = "exalted"):
-    if unit not in {"exalted", "divine"} and not (unit == "chaos" and market_id == "exchange:Currency:exalted"):
+    if unit not in {"exalted", "divine"} and not (unit == "chaos" and market_id in {"exchange:Currency:exalted", "exchange:Currency:divine"}):
         raise HTTPException(400, "Unsupported unit for this market")
     with connect() as db:
         exists = db.execute("SELECT 1 FROM markets WHERE league=? AND id=?",
@@ -1049,7 +1051,7 @@ async def candles(market_id: str, league: str = Query(min_length=1), interval: s
     seconds = {"1m": 60, "5m": 300, "1h": 3600, "1d": 86400}.get(interval)
     if seconds is None:
         raise HTTPException(400, "Unsupported interval")
-    if unit not in ("divine", "exalted") and not (unit == "chaos" and market_id == "exchange:Currency:exalted"):
+    if unit not in ("divine", "exalted") and not (unit == "chaos" and market_id in {"exchange:Currency:exalted", "exchange:Currency:divine"}):
         raise HTTPException(400, "Unsupported unit")
     await collector.refresh_market(league, market_id)
     live_quote = await collector.get_live_market_quote(league, market_id) if unit != "chaos" else None
@@ -1082,7 +1084,7 @@ async def candles(market_id: str, league: str = Query(min_length=1), interval: s
                 ORDER BY minute DESC LIMIT ?""", (league, market_id, min(20000, limit * max(1, seconds // 60))))]
             since = max(0, int(time.time()) - max(seconds * limit * 2, HISTORY_SNAPSHOT_SECONDS * limit))
             snapshot_rows = [{"minute": row["bucket_start"], "price": row["price"]}
-                             for row in exalted_chaos_snapshots(db, league, since)]
+                             for row in currency_chaos_snapshots(db, league, market_id, since)]
             by_minute = {row["minute"]: row for row in snapshot_rows}
             by_minute.update({row["minute"]: row for row in minute_rows})
             data = sorted(by_minute.values(), key=lambda row: row["minute"], reverse=True)[:min(50000, limit * max(1, seconds // 60))]
