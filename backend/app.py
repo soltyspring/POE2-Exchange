@@ -553,14 +553,15 @@ def seasonality(league: str, market_id: str, days: int, unit: str):
                 ORDER BY bucket_start""", (league, market_id, since)).fetchall()
         source = "poe.ninja"
         own_span_days = ((rows[-1]["bucket_start"] - rows[0]["bucket_start"]) / 86400) if len(rows) > 1 else 0
-        if unit == "exalted" and (len(rows) < 100 or own_span_days < 21) and market_id.startswith("exchange:Currency:"):
+        if unit == "exalted" and (len(rows) < 100 or own_span_days < 21) and market_id.startswith("exchange:"):
             historical = db.execute("""SELECT h.sample_at AS bucket_start,
                 h.price_exalted AS price FROM external_price_history h
                 JOIN market_keys k ON k.id=h.market_key
                 WHERE k.league=? AND k.market_id=? AND h.source='poe2scout'
                   AND h.sample_at>=? AND h.price_exalted>0 ORDER BY h.sample_at""",
                 (league, market_id, since)).fetchall()
-            if len(historical) >= 100:
+            historical_span_days = ((historical[-1]["bucket_start"] - historical[0]["bucket_start"]) / 86400) if len(historical) > 1 else 0
+            if len(historical) >= 24 and historical_span_days > own_span_days:
                 rows = historical
                 source = "poe2scout"
     by_date: dict[str, list[tuple[int, float]]] = {}
