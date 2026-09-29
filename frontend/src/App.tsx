@@ -189,7 +189,9 @@ export default function App() {
     if (!exchangeOpen) return
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setExchangeOpen(false) }
     document.addEventListener('keydown', closeOnEscape)
-    return () => document.removeEventListener('keydown', closeOnEscape)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.removeEventListener('keydown', closeOnEscape); document.body.style.overflow = previousOverflow }
   }, [exchangeOpen])
   useEffect(() => {
     fetch('/api/leagues').then(r => {if (!r.ok) throw Error('리그 목록을 불러오지 못했습니다.'); return r.json()})
