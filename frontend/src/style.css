@@ -125,12 +125,12 @@
 .exchange-overlay .exchange-search input{font-size:13px}
 .exchange-overlay .exchange-close{width:38px;height:38px}
 .exchange-overlay .exchange-body{flex:1;height:auto;min-height:0;grid-template-columns:232px minmax(0,1fr)}
-.exchange-overlay .exchange-nav{padding:14px 10px}
+.exchange-overlay .exchange-nav{padding:38px 10px 14px}
 .exchange-overlay .exchange-nav button{min-height:44px;margin-bottom:5px;padding:9px 13px;font-size:13.5px}
 .exchange-overlay .exchange-nav small{font-size:11px}
-.exchange-overlay .exchange-items{padding:14px 26px 26px}
-.exchange-overlay .exchange-group h3{margin:20px 0 10px;font-size:14px;letter-spacing:.02em;color:#ddd3bd}
-.exchange-overlay .exchange-group:first-child h3{margin-top:4px}
+.exchange-overlay .exchange-items{padding:28px 26px 26px}
+.exchange-overlay .exchange-group h3{margin:26px 0 18px;padding:8px 0 12px;font-size:19px;line-height:1.2;letter-spacing:.025em;color:#eadbb8}
+.exchange-overlay .exchange-group:first-child h3{margin-top:0}
 .exchange-overlay .exchange-blocks{display:flex;flex-direction:column;gap:28px}
 .exchange-overlay .exchange-grid{display:grid;grid-template-columns:repeat(3,minmax(0,400px));gap:8px 12px;position:relative;justify-content:start}
 .exchange-overlay .exchange-grid+.exchange-grid:before{content:'';position:absolute;left:0;right:0;top:-15px;border-top:1px solid #56534b}
@@ -141,5 +141,5 @@
 .exchange-overlay .exchange-item-price small{font-size:11px}
 .exchange-overlay .exchange-foot{padding:13px 26px;font-size:11.5px}
 .exchange-overlay .exchange-foot button{padding:9px 16px;font-size:12px}
-@media(max-width:900px){.exchange-overlay .exchange-body{grid-template-columns:150px minmax(0,1fr)}.exchange-overlay .exchange-grid{grid-template-columns:repeat(2,minmax(0,400px))}.exchange-overlay .exchange-items{padding:12px 14px 20px}.exchange-overlay .exchange-heading{padding:14px 16px}.exchange-tools{align-items:stretch;flex-direction:column;gap:7px}.exchange-sort button{flex:1}.exchange-overlay .exchange-search{min-width:0}}
+@media(max-width:900px){.exchange-overlay .exchange-body{grid-template-columns:150px minmax(0,1fr)}.exchange-overlay .exchange-nav{padding-top:32px}.exchange-overlay .exchange-grid{grid-template-columns:repeat(2,minmax(0,400px))}.exchange-overlay .exchange-items{padding:22px 14px 20px}.exchange-overlay .exchange-heading{padding:14px 16px}.exchange-tools{align-items:stretch;flex-direction:column;gap:7px}.exchange-sort button{flex:1}.exchange-overlay .exchange-search{min-width:0}}
 @media(max-width:600px){.exchange-overlay .exchange-grid{grid-template-columns:minmax(0,400px)}}
