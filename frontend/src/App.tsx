@@ -30,6 +30,13 @@ type OfficialVolumeCell = {weekday: number; hour: number; median_volume_item: nu
 type OfficialVolume = {supported: boolean; source: string; sample_count: number; first_hour: number | null; last_hour: number | null; total_volume_item: number; cells: OfficialVolumeCell[]}
 type Seasonality = {timezone: string; lookback_days: number; sample_count: number; observed_days: number; first_sample_at: number | null; last_sample_at: number | null; source: 'poe.ninja' | 'poe2scout'; cells: SeasonalityCell[]; best_slot: SeasonalityCell | null; official_volume: OfficialVolume}
 const weekdays = ['월', '화', '수', '목', '금', '토', '일']
+const exchangeCategories = ['Currency', 'Essences', 'Ritual', 'Runes', 'SoulCores', 'Breach', 'Delirium', 'LineageSupportGems', 'UniqueWeapons', 'UniqueArmours', 'UniqueAccessories', 'UniqueFlasks', 'UniqueJewels', 'UniqueCharms']
+const currencyGroups = [
+  {label: '화폐', ids: ['transmute', 'greater-orb-of-transmutation', 'perfect-orb-of-transmutation', 'aug', 'greater-orb-of-augmentation', 'perfect-orb-of-augmentation', 'regal', 'greater-regal-orb', 'perfect-regal-orb', 'exalted', 'greater-exalted-orb', 'perfect-exalted-orb', 'chaos', 'greater-chaos-orb', 'perfect-chaos-orb', 'vaal', 'alch', 'divine', 'chance', 'annul', 'fracturing-orb', 'mirror', 'hinekoras-lock', 'crystallised-corruption']},
+  {label: '주얼러의 화폐', ids: ['lesser-jewellers-orb', 'greater-jewellers-orb', 'perfect-jewellers-orb']},
+  {label: '화폐 파편', ids: ['chance-shard', 'artificers-shard']},
+  {label: '퀄리티 화폐', ids: ['whetstone', 'scrap', 'gcp', 'bauble']},
+]
 const intervals = ['1m', '5m', '1h', '1d'] as const
 type Interval = typeof intervals[number]
 const labels: Record<Interval, string> = {'1m': '1분', '5m': '5분', '1h': '1시간', '1d': '1일'}
@@ -155,6 +162,8 @@ export default function App() {
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('all')
+  const [exchangeCategory, setExchangeCategory] = useState('Currency')
+  const [exchangeQuery, setExchangeQuery] = useState('')
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [marketSort, setMarketSort] = useState<MarketSort>('price')
   const [sortDescending, setSortDescending] = useState(true)
@@ -330,6 +339,11 @@ export default function App() {
   const displayPrice = (value: number) => price(unit === 'exalted' ? value * (data?.exalted_per_divine || 0) : value)
   const unitLabel = unit === 'divine' ? '신성' : '엑잘'
   const chaosMarket = data?.markets.find(m => m.id === 'exchange:Currency:chaos')
+  const chaosPrice = (market: Market) => {
+    if (!chaosMarket?.price_divine) return '—'
+    const value = market.price_divine / chaosMarket.price_divine
+    return value > 0 && value < .000001 ? '<0.000001' : price(value)
+  }
   const marketPrice = (market: Market) => market.id === 'exchange:Currency:exalted'
     ? chaosMarket?.price_divine ? price(market.price_divine / chaosMarket.price_divine) : '—'
     : displayPrice(market.price_divine)
@@ -346,6 +360,11 @@ export default function App() {
   const selectedCadence = Math.max(1, Math.round((data?.selected_poll_seconds || 60) / 60))
   const marketCadence = Math.max(1, Math.round((data?.upstream_poll_seconds || 900) / 60))
   const currencyMarkets = data?.markets.filter(m => ['exchange:Currency:divine', 'exchange:Currency:exalted', 'exchange:Currency:chaos'].includes(m.id)) || []
+  const exchangeMarkets = (data?.markets || []).filter(m => (exchangeCategory === 'all' || m.category === exchangeCategory) && (!exchangeQuery.trim() || m.name.toLocaleLowerCase('ko-KR').includes(exchangeQuery.trim().toLocaleLowerCase('ko-KR'))))
+  const groupedExchangeMarkets = exchangeCategory === 'Currency' && !exchangeQuery.trim() ? [
+    ...currencyGroups.map(group => ({label: group.label, markets: group.ids.map(id => exchangeMarkets.find(m => m.id === `exchange:Currency:${id}`)).filter((m): m is Market => !!m)})),
+    {label: '기타 화폐', markets: exchangeMarkets.filter(m => !currencyGroups.some(group => group.ids.includes(m.id.replace('exchange:Currency:', ''))))},
+  ].filter(group => group.markets.length) : exchangeCategory === 'all' ? exchangeCategories.map(key => ({label: data?.categories[key] || key, markets: exchangeMarkets.filter(m => m.category === key)})).filter(group => group.markets.length) : [{label: data?.categories[exchangeCategory] || exchangeCategory, markets: exchangeMarkets}]
   const heatCells = new Map(seasonalityData?.cells.map(cell => [`${cell.weekday}:${cell.hour}`, cell]) || [])
   const heatScale = Math.max(0.5, ...((seasonalityData?.cells || []).map(cell => Math.abs(cell.relative_percent))))
   const volumeCells = new Map(seasonalityData?.official_volume.cells.map(cell => [`${cell.weekday}:${cell.hour}`, cell]) || [])
@@ -413,6 +432,11 @@ export default function App() {
             <div className="market-panel-foot"><span>종목 선택 시 차트가 변경됩니다</span><span>시세 {marketCadence}분 확인</span></div>
           </section>
         </div>
+        <section className="exchange-panel" aria-label="게임 거래소 형태의 아이템 시세표">
+          <div className="exchange-heading"><div><div className="eyebrow small">GAME EXCHANGE</div><h2>아이템 거래소 시세표</h2><p>게임의 아이템 선택 화면처럼 분류별로 살펴보고, 1개당 카오스 환산 시세를 확인하세요.</p></div><label className="exchange-search"><Search size={16}/><input value={exchangeQuery} onChange={e => setExchangeQuery(e.target.value)} placeholder="현재 분류에서 검색" aria-label="거래소 아이템 검색"/>{exchangeQuery && <button onClick={() => setExchangeQuery('')} title="검색어 지우기"><X size={15}/></button>}</label></div>
+          <div className="exchange-body"><nav className="exchange-nav" aria-label="거래소 아이템 분류"><button className={exchangeCategory === 'all' ? 'active' : ''} onClick={() => {setExchangeCategory('all'); setExchangeQuery('')}}><span>모두</span><small>{data?.markets.length || 0}</small></button>{exchangeCategories.filter(key => data?.categories[key]).map(key => <button key={key} className={exchangeCategory === key ? 'active' : ''} onClick={() => {setExchangeCategory(key); setExchangeQuery('')}}><span>{data?.categories[key]}</span><small>{data?.markets.filter(m => m.category === key).length}</small></button>)}</nav><div className="exchange-items">{groupedExchangeMarkets.map(group => <div className="exchange-group" key={group.label}><h3>{group.label}</h3><div className="exchange-grid">{group.markets.map(m => <button key={m.id} className={`exchange-item ${selectedId === m.id ? 'selected' : ''}`} onClick={() => setSelectedId(m.id)} title={`${m.name} · ${chaosPrice(m)} 카오스`}><MarketIcon market={m}/><span className="exchange-item-name">{m.name}</span><span className="exchange-item-price">{chaosPrice(m)} <small>카오스</small></span></button>)}</div></div>)}{!exchangeMarkets.length && <div className="exchange-no-results">표시할 아이템이 없습니다.</div>}</div></div>
+          <div className="exchange-foot">poe.ninja 관측 시세를 카오스 오브 가치로 환산 · 개별 매물이나 실제 체결 가격과 다를 수 있습니다</div>
+        </section>
         <section className="panel seasonality-panel" aria-label="요일별 매수 시간 분석">
           <div className="seasonality-heading"><div><div className="eyebrow small">BUYING WINDOW</div><h2>요일·시간대 가격 패턴</h2><p>{selected?.name || '아이템'}의 가격과 공식 교환 거래량을 한국 시간 기준으로 봅니다.</p></div><div className="seasonality-controls"><div className="seasonality-period" aria-label="분석 자료"><button className={!showVolume ? 'active' : ''} onClick={() => setHeatMetric('price')}>가격 편차</button>{seasonalityData?.official_volume.supported && <button className={showVolume ? 'active' : ''} onClick={() => setHeatMetric('volume')}>공식 거래량</button>}</div><div className="seasonality-period" aria-label="분석 기간">{([28, 56, 84] as const).map(days => <button key={days} className={historyDays === days ? 'active' : ''} onClick={() => setHistoryDays(days)}>{days / 7}주</button>)}</div></div></div>
           <div className="seasonality-summary"><div><span>{seasonalityData?.source === 'poe2scout' ? 'POE2Scout 과거 가격 기록' : '저장된 전체 시장 관측'}</span><strong>{seasonalityData ? `${nfmt(seasonalityData.sample_count)}회 · ${seasonalityData.observed_days}일` : seasonalityLoading ? '불러오는 중' : '—'}</strong></div><div><span>상대적으로 저렴했던 시간</span><strong>{seasonalityData?.best_slot ? `${weekdays[seasonalityData.best_slot.weekday]}요일 ${String(seasonalityData.best_slot.hour).padStart(2, '0')}시 · ${changeText(seasonalityData.best_slot.relative_percent)}` : '분석을 위한 기록 누적 중'}</strong></div><div><span>{seasonalityData?.official_volume.supported ? 'GGG 공식 교환량 · 선택 기간' : '분석 조건'}</span><strong>{seasonalityData?.official_volume.supported ? `${nfmt(seasonalityData.official_volume.total_volume_item)}개 · ${seasonalityData.official_volume.sample_count}시간` : '3주 이상 · 시간대별 3일 이상'}</strong></div></div>
