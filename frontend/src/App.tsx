@@ -126,7 +126,7 @@ function PriceChart({candles, loading, interval}: {candles: Candle[]; loading: b
     api.subscribeCrosshairMove(onCrosshairMove)
     return () => api.unsubscribeCrosshairMove(onCrosshairMove)
   }, [candles, interval])
-  return <div className="chart-wrap"><div ref={box} />{hovered && <div className="chart-legend"><span>{clock(hovered.time)}</span>{interval === '1m' ? <strong>{price(hovered.close)} · 관측 {hovered.samples}회</strong> : <strong>시 {price(hovered.open)}　고 {price(hovered.high)}　저 {price(hovered.low)}　종 {price(hovered.close)} <small>· 관측 {hovered.samples}회</small></strong>}</div>}{!loading && candles.length < 2 && <div className="chart-empty"><Activity size={25}/><strong>관측 데이터를 모으는 중</strong><span>서버 실행 후 1분마다 가격 스냅샷이 쌓입니다.</span><span>원천 시세는 대략 1시간마다 갱신됩니다.</span></div>}</div>
+  return <div className="chart-wrap"><div ref={box} />{hovered && <div className="chart-legend"><span>{clock(hovered.time)}</span>{interval === '1m' ? <strong>{price(hovered.close)} · 관측 {hovered.samples}회</strong> : <strong>시 {price(hovered.open)}　고 {price(hovered.high)}　저 {price(hovered.low)}　종 {price(hovered.close)} <small>· 관측 {hovered.samples}회</small></strong>}</div>}{candles.length < 2 && <div className="chart-empty"><Activity size={25}/><strong>{loading ? '차트 조회 중' : '관측 데이터를 모으는 중'}</strong><span>{loading ? '선택한 아이템의 가격 기록을 불러오고 있습니다.' : '서버 실행 후 1분마다 가격 스냅샷이 쌓입니다.'}</span>{!loading && <span>원천 시세는 대략 1시간마다 갱신됩니다.</span>}</div>}</div>
 }
 
 function MarketIcon({market, size = 'normal'}: {market: Market; size?: 'normal' | 'large'}) {
@@ -149,6 +149,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState('')
   const [interval, setInterval] = useState<Interval>('1m')
   const [candles, setCandles] = useState<Candle[]>([])
+  const [candlesKey, setCandlesKey] = useState('')
   const [chartLoading, setChartLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -169,6 +170,9 @@ export default function App() {
   const [selectedSourceStatus, setSelectedSourceStatus] = useState<SourceStatus | null>(null)
   const [updated, setUpdated] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
+  const exaltedChaos = selectedId === 'exchange:Currency:exalted'
+  const chartUnit = exaltedChaos ? 'chaos' : unit
+  const chartKey = `${selectedId}:${league}:${interval}:${chartUnit}`
 
   useEffect(() => { localStorage.setItem('poe2-favorites', JSON.stringify(favorites)) }, [favorites])
   useEffect(() => {
@@ -201,11 +205,12 @@ export default function App() {
     const load = async () => {
       setChartLoading(true)
       try {
-        const response = await fetch(`/api/candles/${encodeURIComponent(selectedId)}?league=${encodeURIComponent(league)}&interval=${interval}&unit=${unit}&limit=500`)
+        const response = await fetch(`/api/candles/${encodeURIComponent(selectedId)}?league=${encodeURIComponent(league)}&interval=${interval}&unit=${chartUnit}&limit=500`)
         if (!response.ok) throw Error('차트 데이터 오류')
         const result = await response.json()
         if (active) {
           setCandles(result.candles)
+          setCandlesKey(chartKey)
           setChartKind(result.kind === 'live_listings' ? 'live_listings' : 'observed_snapshots')
           setLiveQuote(result.live_quote || null)
           setSelectedSourceStatus(result.source_status || null)
@@ -217,12 +222,12 @@ export default function App() {
             } : current)
           }
         }
-      } catch {if (active) { setCandles([]); setChartKind('observed_snapshots'); setLiveQuote(null) }}
+      } catch {if (active) { setCandles([]); setCandlesKey(chartKey); setChartKind('observed_snapshots'); setLiveQuote(null) }}
       finally {if (active) setChartLoading(false)}
     }
     void load(); const timer = window.setInterval(load, (data?.selected_poll_seconds || 60) * 1000)
     return () => {active = false; clearInterval(timer)}
-  }, [selectedId, league, interval, unit, data?.selected_poll_seconds])
+  }, [selectedId, league, interval, chartUnit, chartKey, data?.selected_poll_seconds])
   useEffect(() => {
     setScout(null)
     if (!selectedId.startsWith('exchange:') || !league) return
@@ -259,13 +264,13 @@ export default function App() {
     if (!league || !selectedId) { setSeasonalityData(null); return }
     let active = true
     setSeasonalityLoading(true)
-    fetch(`/api/seasonality/${encodeURIComponent(selectedId)}?league=${encodeURIComponent(league)}&days=${historyDays}&unit=${unit}`)
+    fetch(`/api/seasonality/${encodeURIComponent(selectedId)}?league=${encodeURIComponent(league)}&days=${historyDays}&unit=${chartUnit}`)
       .then(response => { if (!response.ok) throw Error('분석 데이터를 불러오지 못했습니다.'); return response.json() })
       .then((result: Seasonality) => { if (active) setSeasonalityData(result) })
       .catch(() => { if (active) setSeasonalityData(null) })
       .finally(() => { if (active) setSeasonalityLoading(false) })
     return () => { active = false }
-  }, [selectedId, league, historyDays, unit, updated])
+  }, [selectedId, league, historyDays, chartUnit, updated])
 
   const forceRefreshSelected = useCallback(async () => {
     if (!league || !selectedId || refreshing) return
@@ -279,10 +284,11 @@ export default function App() {
         const scoutResponse = await fetch(`/api/scout/${encodeURIComponent(selectedId)}?league=${encodeURIComponent(league)}`)
         setScout(scoutResponse.ok ? await scoutResponse.json() : null)
       }
-      const candleResponse = await fetch(`/api/candles/${encodeURIComponent(selectedId)}?league=${encodeURIComponent(league)}&interval=${interval}&unit=${unit}&limit=500`)
+      const candleResponse = await fetch(`/api/candles/${encodeURIComponent(selectedId)}?league=${encodeURIComponent(league)}&interval=${interval}&unit=${chartUnit}&limit=500`)
       if (candleResponse.ok) {
         const result = await candleResponse.json()
         setCandles(result.candles || [])
+        setCandlesKey(chartKey)
         setChartKind(result.kind === 'live_listings' ? 'live_listings' : 'observed_snapshots')
         setLiveQuote(result.live_quote || null)
         setSelectedSourceStatus(result.source_status || null)
@@ -300,7 +306,7 @@ export default function App() {
     } finally {
       setRefreshing(false)
     }
-  }, [league, selectedId, refreshing, fetchMarkets, interval, unit])
+  }, [league, selectedId, refreshing, fetchMarkets, interval, chartUnit, chartKey])
 
   const selected = data?.markets.find(m => m.id === selectedId)
   const marketMap = useMemo(() => new Map(data?.markets.map(m => [m.id, m]) || []), [data])
@@ -323,7 +329,8 @@ export default function App() {
   }
   const displayPrice = (value: number) => price(unit === 'exalted' ? value * (data?.exalted_per_divine || 0) : value)
   const unitLabel = unit === 'divine' ? '신성' : '엑잘'
-  const selectedPriceText = selected ? (liveQuote
+  const chaosMarket = data?.markets.find(m => m.id === 'exchange:Currency:chaos')
+  const selectedPriceText = selected && exaltedChaos ? (chaosMarket?.price_divine ? price(selected.price_divine / chaosMarket.price_divine) : '—') : selected ? (liveQuote
     ? price(unit === 'exalted' ? liveQuote.price_exalted : (liveQuote.price_divine ?? selected.price_divine))
     : displayPrice(selected.price_divine)) : '—'
   const toggleFavorite = (id: string) => setFavorites(items => items.includes(id) ? items.filter(x => x !== id) : [...items, id])
@@ -365,9 +372,9 @@ export default function App() {
         </div>
         <div className="main-grid">
           <section className="panel chart-panel"><div className="panel-head chart-head"><div className="selected-title">{selected ? <MarketIcon market={selected} size="large"/> : <span className="market-icon large"><Coins/></span>}<div><div className="selected-sub">{selected?.category_label || 'MARKET'} {selected?.base_type ? `· ${selected.base_type}` : ''}</div><h2>{selected?.name || (loading ? '시세를 불러오는 중...' : '아이템을 선택하세요')}</h2></div></div><button className={`favorite-button ${selected && favorites.includes(selected.id) ? 'saved' : ''}`} title="관심 목록" disabled={!selected} onClick={() => selected && toggleFavorite(selected.id)}><Star size={19} fill={selected && favorites.includes(selected.id) ? 'currentColor' : 'none'}/></button></div>
-            <div className="price-line"><strong>{selectedPriceText} <em>{unitLabel}</em></strong><span className={`price-change ${changeClass(selected?.trend_percent ?? null)}`}>{changeText(selected?.trend_percent ?? null)} <small>poe.ninja 변동</small></span></div>
-            {liveQuote && <div className="live-source">Trade2 매물 호가 · 중앙값 {price(liveQuote.price_exalted)} 엑잘{liveQuote.count != null ? ` · ${liveQuote.count}개 매물` : ''} · {timeAgo(liveQuote.observed_at)}</div>}<div className="chart-toolbar"><div className="intervals">{intervals.map(item => <button key={item} className={interval === item ? 'active' : ''} onClick={() => setInterval(item)}>{labels[item]}</button>)}</div><div className="units"><button className={unit === 'divine' ? 'active' : ''} onClick={() => setUnit('divine')}>신성</button><button className={unit === 'exalted' ? 'active' : ''} onClick={() => setUnit('exalted')}>엑잘</button></div></div>
-            <PriceChart key={`${selectedId}:${league}:${interval}:${unit}`} candles={candles} loading={chartLoading} interval={interval}/>
+            <div className="price-line"><strong>{selectedPriceText} <em>{exaltedChaos ? '카오스 / 1 엑잘' : unitLabel}</em></strong><span className={`price-change ${changeClass(selected?.trend_percent ?? null)}`}>{changeText(selected?.trend_percent ?? null)} <small>poe.ninja 변동</small></span></div>
+            {liveQuote && !exaltedChaos && <div className="live-source">Trade2 매물 호가 · 중앙값 {price(liveQuote.price_exalted)} 엑잘{liveQuote.count != null ? ` · ${liveQuote.count}개 매물` : ''} · {timeAgo(liveQuote.observed_at)}</div>}<div className="chart-toolbar"><div className="intervals">{intervals.map(item => <button key={item} className={interval === item ? 'active' : ''} onClick={() => setInterval(item)}>{labels[item]}</button>)}</div>{exaltedChaos ? <div className="units special-unit">1 엑잘 = 카오스</div> : <div className="units"><button className={unit === 'divine' ? 'active' : ''} onClick={() => setUnit('divine')}>신성</button><button className={unit === 'exalted' ? 'active' : ''} onClick={() => setUnit('exalted')}>엑잘</button></div>}</div>
+            <PriceChart key={chartKey} candles={candlesKey === chartKey ? candles : []} loading={chartLoading || candlesKey !== chartKey} interval={interval}/>
             <div className="chart-caption"><span><span className="caption-dot"/> {interval === '1m' ? '1분 간격 가격 관측값' : `${labels[interval]} 구간의 관측값 OHLC`}</span><span>{chartKind === 'live_listings' ? `Trade2 매물 호가 관측 · ${Math.round((data?.trade2_live_seconds || 30))}초 확인 · 체결가 아님` : `poe.ninja 시세 관측 · 선택 ${selectedCadence}분 확인 · 체결가 아님`}</span></div>
             <div className="market-facts"><div><span>마지막 성공 갱신</span><strong>{selectedSource?.fetched_at ? clock(selectedSource.fetched_at) : selected ? clock(selected.observed_at) : '—'}</strong></div><div><span>다음 자동 확인</span><strong>{selectedSource?.next_refresh_at ? clock(selectedSource.next_refresh_at) : `${selectedCadence}분 주기`}</strong></div><div><span>캐시 상태</span><strong>{selectedSource ? `${selectedSource.cache_state === 'fresh' ? '정상' : selectedSource.cache_state === 'error' ? '오류 · 이전 값' : '갱신 대기'}${selectedSource.conditional_cache ? ' · ETag' : ''}` : '—'}</strong></div><div><span>{selected?.source_kind === 'stash' ? '현재 매물' : '거래 규모'}</span><strong>{selected ? selected.source_kind === 'stash' ? `${nfmt(selected.listing_count || 0)}개` : selected.volume_divine != null ? `${nfmt(selected.volume_divine)} 신성` : '—' : '—'}</strong></div></div>
             {scout && <ScoutReference data={scout}/>}
