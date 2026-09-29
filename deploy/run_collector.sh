@@ -7,6 +7,11 @@ if [ -f "$repo/.env" ]; then
   . "$repo/.env"
   set +a
 fi
+if [ -f "$repo/backend/.env" ]; then
+  set -a
+  . "$repo/backend/.env"
+  set +a
+fi
 export POE_DB_PATH="$repo/data/prices.sqlite3"
 export POE_DEFAULT_LEAGUE="Forbidden Rites"
 export PYTHONDONTWRITEBYTECODE=1
