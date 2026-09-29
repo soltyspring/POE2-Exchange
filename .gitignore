@@ -6,6 +6,7 @@ frontend/dist/
 frontend/tsconfig.tsbuildinfo
 data/*.sqlite3*
 *.log
+runtime/
 .env
 .env.*
 !.env.example
