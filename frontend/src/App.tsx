@@ -84,7 +84,7 @@ function PriceChart({candles, loading, interval}: {candles: Candle[]; loading: b
       crosshair: {vertLine: {color: '#9aabc2', labelBackgroundColor: '#3767ba'}, horzLine: {color: '#9aabc2', labelBackgroundColor: '#3767ba'}},
       rightPriceScale: {borderColor: '#e7ecf2', scaleMargins: {top: .12, bottom: .12}},
       timeScale: {borderColor: '#e7ecf2', timeVisible: true, secondsVisible: false, rightOffset: 9, barSpacing: 14, tickMarkFormatter: (time: unknown) => chartTimeLabel(time, interval)},
-      localization: {locale: 'ko-KR'},
+      localization: {locale: 'ko-KR', timeFormatter: (time: unknown) => chartTimeLabel(time, interval)},
     })
     const series = api.addSeries(CandlestickSeries, {
       upColor: '#d63651', downColor: '#2868c7', borderUpColor: '#d63651', borderDownColor: '#2868c7',
@@ -99,7 +99,10 @@ function PriceChart({candles, loading, interval}: {candles: Candle[]; loading: b
     return () => { resize.disconnect(); api.remove(); chart.current = null; candleSeries.current = null; lineSeries.current = null }
   }, [])
   useEffect(() => {
-    chart.current?.applyOptions({timeScale: {tickMarkFormatter: (time: unknown) => chartTimeLabel(time, interval)}})
+    chart.current?.applyOptions({
+      timeScale: {tickMarkFormatter: (time: unknown) => chartTimeLabel(time, interval)},
+      localization: {locale: 'ko-KR', timeFormatter: (time: unknown) => chartTimeLabel(time, interval)},
+    })
   }, [interval])
   useEffect(() => {
     const api = chart.current
