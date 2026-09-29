@@ -70,6 +70,7 @@ const timeAgo = (seconds: number) => {
 }
 const changeClass = (n: number | null) => n == null ? '' : n > 0 ? 'up' : n < 0 ? 'down' : ''
 const changeText = (n: number | null) => n == null ? '—' : `${n > 0 ? '+' : ''}${nfmt(n, 2)}%`
+const cleanSummary = (value: string | undefined) => (value || '').replace(/^#{1,6}\s*/gm, '').replace(/\*\*/g, '').replace(/`/g, '').trim()
 const chartTimeLabel = (value: unknown, interval: Interval) => {
   if (typeof value !== 'number' || !Number.isFinite(value)) return ''
   const date = new Date(value * 1000)
@@ -456,8 +457,9 @@ export default function App() {
   const volumeCells = new Map(seasonalityData?.official_volume.cells.map(cell => [`${cell.weekday}:${cell.hour}`, cell]) || [])
   const volumeScale = Math.max(1, ...((seasonalityData?.official_volume.cells || []).map(cell => cell.median_volume_item)))
   const showVolume = heatMetric === 'volume' && !!seasonalityData?.official_volume.supported
-  const hasHeatmapData = showVolume ? volumeCells.size > 0 : heatCells.size > 0
-  const worstSlot = seasonalityData?.cells.length ? [...seasonalityData.cells].sort((a, b) => b.relative_percent - a.relative_percent)[0] : null
+  const pricePatternReady = (seasonalityData?.observed_days || 0) >= 3 && heatCells.size > 0
+  const hasHeatmapData = showVolume ? volumeCells.size > 0 : pricePatternReady
+  const worstSlot = pricePatternReady && seasonalityData?.cells.length ? [...seasonalityData.cells].sort((a, b) => b.relative_percent - a.relative_percent)[0] : null
   const analysisProgress = Math.min(100, ((seasonalityData?.observed_days || 0) / 21) * 100)
 
   return <div className="app-shell">
@@ -466,20 +468,17 @@ export default function App() {
       <div className="side-section-label">WORKSPACE</div>
       <button aria-current={marketScope === 'all' ? 'page' : undefined} className={`side-link ${marketScope === 'all' ? 'active' : ''}`} onClick={() => {setMarketScope('all'); setCategory('all')}}><LayoutDashboard size={18}/>시세 대시보드</button>
       <button aria-current={marketScope === 'favorites' ? 'page' : undefined} className={`side-link ${marketScope === 'favorites' ? 'active' : ''}`} onClick={() => {setMarketScope('favorites'); setCategory('all')}}><Star size={18}/>관심 목록 <span className="side-count">{watchlist.length}</span></button>
-      <button className="side-link" onClick={() => setRewardsOpen(true)}><Gift size={18}/>콘텐츠 보상</button>
-      <button className="side-link" onClick={() => setExchangeOpen(true)}><Coins size={18}/>거래소 시세표</button>
       <div className="side-quick"><span>빠른 분류</span><div>{Object.entries(data?.categories || {}).slice(0, 8).map(([key, label]) => <button key={key} className={category === key ? 'active' : ''} onClick={() => {setCategory(key); setMarketScope('all')}}>{label}</button>)}</div></div>
       <div className="sidebar-bottom"><div className="source-badge"><ShieldCheck size={16}/> MARKET SOURCES</div><p>poe.ninja 기준 시세{data?.trade2_live_enabled ? ' · 주요 통화 Trade2 매물 호가' : ''}</p></div>
     </aside>
 
     <main className="main">
-      <header className="topbar"><div className="breadcrumb">POE2 MARKET <span>/</span> <b>대시보드</b></div><div className="top-actions"><button className="reward-launch" onClick={() => setRewardsOpen(true)}><Gift size={16}/>콘텐츠 보상</button><button className="exchange-launch" onClick={() => setExchangeOpen(true)}><Coins size={16}/>거래소 시세표</button><span className="live-pill"><i/> {lastFetched ? `${timeAgo(lastFetched)} 갱신` : '데이터 연결'}</span><button className={`icon-button ${refreshing ? 'spinning' : ''}`} title="선택 아이템 강제 갱신 · 캐시 무시" disabled={!selectedId || refreshing} onClick={() => void forceRefreshSelected()}><RefreshCw size={17}/></button><div className="avatar">P2</div></div></header>
+      <header className="topbar"><div className="breadcrumb">POE2 MARKET <span>/</span> <b>대시보드</b></div><div className="top-actions"><button className="reward-launch" onClick={() => setRewardsOpen(true)}><Gift size={16}/>콘텐츠 보상</button><button className="exchange-launch" onClick={() => setExchangeOpen(true)}><Coins size={16}/>거래소 시세표</button><span className="live-pill" aria-live="polite"><i/> {lastFetched ? `${timeAgo(lastFetched)} 갱신` : '데이터 연결'}</span><button className={`icon-button ${refreshing ? 'spinning' : ''}`} title="선택 아이템 강제 갱신 · 캐시 무시" disabled={!selectedId || refreshing} onClick={() => void forceRefreshSelected()}><RefreshCw size={17}/></button><div className="avatar">P2</div></div></header>
       <div className="content">
         <div className="page-heading"><div><div className="eyebrow">PATH OF EXILE 2 • ECONOMY TRACKER</div><h1>시세 대시보드</h1><p>아이템을 찾고, 가격 흐름과 저렴했던 시간을 한 화면에서 확인하세요.</p></div><label className="league-select"><span>거래 리그</span><select value={league} onChange={e => {setLeague(e.target.value); setData(null); setSelectedId('')}}>{leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select><ChevronDown size={15}/></label></div>
-        {error && <div className="error-banner">{error}<button onClick={() => void fetchMarkets(true)}>다시 시도</button></div>}
+        {error && <div className="error-banner" role="alert">{error}<button onClick={() => void fetchMarkets(true)}>다시 시도</button></div>}
         <div className="market-ticker" aria-label="주요 통화 환율">
           {currencyMarkets.map(m => <button key={m.id} className={m.id === selectedId ? 'active' : ''} onClick={() => setSelectedId(m.id)}><MarketIcon market={m}/><span><strong>{m.name}</strong><small>엑잘 {summaryExalted(m)} · 카오스 {summaryChaos(m)}</small></span><em className={changeClass(m.trend_percent)}>{changeText(m.trend_percent)}</em></button>)}
-          <span className="ticker-status"><i/>{lastFetched ? timeAgo(lastFetched) + ' 갱신' : '연결 중'}</span>
         </div>
         <div className="main-grid">
           <section className="panel chart-panel"><div className="panel-head chart-head"><div className="selected-title">{selected ? <MarketIcon market={selected} size="large"/> : <span className="market-icon large"><Coins/></span>}<div><div className="selected-sub">{selected?.category_label || 'MARKET'} {selected?.base_type ? `· ${selected.base_type}` : ''}</div><h2>{selected?.name || (loading ? '시세를 불러오는 중...' : '아이템을 선택하세요')}</h2></div></div><button className={`favorite-button ${selected && favorites.includes(selected.id) ? 'saved' : ''}`} title="관심 목록" disabled={!selected} onClick={() => selected && toggleFavorite(selected.id)}><Star size={19} fill={selected && favorites.includes(selected.id) ? 'currentColor' : 'none'}/></button></div>
@@ -531,7 +530,7 @@ export default function App() {
         <section id="buying-window" className="panel seasonality-panel" aria-label="요일별 매수 시간 분석">
           <div className="seasonality-heading"><div><div className="eyebrow small">BUYING WINDOW</div><h2>요일·시간대 가격 패턴</h2><p>{selected?.name || '아이템'}의 가격과 공식 교환 거래량을 한국 시간 기준으로 봅니다.</p></div><div className="seasonality-controls"><div className="seasonality-period" aria-label="분석 자료"><button className={!showVolume ? 'active' : ''} onClick={() => setHeatMetric('price')}>가격 편차</button>{seasonalityData?.official_volume.supported && <button className={showVolume ? 'active' : ''} onClick={() => setHeatMetric('volume')}>공식 거래량</button>}</div><div className="seasonality-period" aria-label="분석 기간">{([28, 56, 84] as const).map(days => <button key={days} className={historyDays === days ? 'active' : ''} onClick={() => setHistoryDays(days)}>{days / 7}주</button>)}</div></div></div>
           <div className="seasonality-summary"><div><span>{seasonalityData?.source === 'poe2scout' ? 'POE2Scout 과거 가격 기록' : '저장된 전체 시장 관측'}</span><strong>{seasonalityData ? `${nfmt(seasonalityData.sample_count)}회 · ${seasonalityData.observed_days}일` : seasonalityLoading ? '불러오는 중' : '—'}</strong></div><div><span>상대적으로 저렴했던 시간</span><strong>{seasonalityData?.best_slot ? `${weekdays[seasonalityData.best_slot.weekday]}요일 ${String(seasonalityData.best_slot.hour).padStart(2, '0')}시 · ${changeText(seasonalityData.best_slot.relative_percent)}` : '분석을 위한 기록 누적 중'}</strong></div><div><span>{seasonalityData?.official_volume.supported ? 'GGG 공식 교환량 · 선택 기간' : '분석 조건'}</span><strong>{seasonalityData?.official_volume.supported ? `${nfmt(seasonalityData.official_volume.total_volume_item)}개 · ${seasonalityData.official_volume.sample_count}시간` : '3주 이상 · 시간대별 3일 이상'}</strong></div></div>
-          <div className="ai-market-summary"><div className="ai-summary-mark">AI</div><div><div className="ai-summary-title"><strong>시세 경향 요약</strong><span>{marketSummary?.generated_by === 'ai' ? `${marketSummary.model || 'AI'} 분석` : '통계 분석'}</span></div><p>{summaryLoading ? '요일·시간대 시세 경향을 분석하고 있습니다.' : marketSummary?.summary || '분석 가능한 시세 기록을 모으고 있습니다.'}</p></div></div>
+          <div className="ai-market-summary"><div className="ai-summary-mark">{marketSummary?.generated_by === 'ai' ? 'AI' : '요약'}</div><div><div className="ai-summary-title"><strong>시세 경향 요약</strong><span>{marketSummary?.generated_by === 'ai' ? `${marketSummary.model || 'AI'} 분석` : '통계 분석'}</span></div><p>{summaryLoading ? '요일·시간대 시세 경향을 분석하고 있습니다.' : cleanSummary(marketSummary?.summary) || '분석 가능한 시세 기록을 모으고 있습니다.'}</p></div></div>
           {hasHeatmapData ? <div className="heatmap-scroll"><div className="heatmap-grid"><div className="heatmap-corner">시각</div>{weekdays.map(day => <div key={day} className="heatmap-day">{day}요일</div>)}{Array.from({length: 24}, (_, hour) => <div className="heatmap-hour-row" key={hour}><div className="heatmap-hour">{String(hour).padStart(2, '0')}:00</div>{weekdays.map((day, weekday) => {
             const cell = heatCells.get(`${weekday}:${hour}`)
             const volume = volumeCells.get(`${weekday}:${hour}`)
