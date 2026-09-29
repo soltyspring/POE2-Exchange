@@ -57,7 +57,8 @@ const initialFavorites = (): string[] => {
   try { return JSON.parse(localStorage.getItem('poe2-favorites') || '[]') } catch { return [] }
 }
 const nfmt = (n: number, max = 2) => new Intl.NumberFormat('ko-KR', {maximumFractionDigits: max}).format(n)
-const price = (n: number) => n >= 100 ? nfmt(n, 1) : n >= 1 ? nfmt(n, 3) : nfmt(n, 6)
+const price = (n: number) => n > 0 && n < .001 ? '<0.001' : nfmt(n, 3)
+const compactPrice = (n: number) => n >= 100 ? nfmt(n, 1) : n >= 1 ? nfmt(n, 3) : n > 0 && n < .001 ? '<0.001' : nfmt(n, 3)
 const clock = (seconds: number) => new Date(seconds * 1000).toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
 const timeAgo = (seconds: number) => {
   const minutes = Math.max(0, Math.floor((Date.now() / 1000 - seconds) / 60))
@@ -126,7 +127,7 @@ function PriceChart({candles, loading, interval}: {candles: Candle[]; loading: b
     const minimum = values.length ? Math.min(...values) : 0
     const maximum = values.length ? Math.max(...values) : 1
     const padding = Math.max((maximum - minimum) * .15, Math.abs(maximum) * .015, .000001)
-    const precision = maximum >= 100 ? 2 : maximum >= 1 ? 4 : 6
+    const precision = 3
     const priceFormat = {type: 'price' as const, precision, minMove: 10 ** -precision}
     const autoscaleInfoProvider = () => ({priceRange: {minValue: Math.max(0, minimum - padding), maxValue: maximum + padding}})
     series.applyOptions({priceFormat, autoscaleInfoProvider, visible: interval !== '1m'})
@@ -210,8 +211,8 @@ export default function App() {
   const [updated, setUpdated] = useState(0)
   const exchangeSearchRef = useRef<HTMLInputElement>(null)
   const [refreshing, setRefreshing] = useState(false)
-  const exaltedChaos = selectedId === 'exchange:Currency:exalted'
-  const chartUnit = exaltedChaos ? 'chaos' : unit
+  const chaosReference = selectedId === 'exchange:Currency:exalted' || selectedId === 'exchange:Currency:divine'
+  const chartUnit = chaosReference ? 'chaos' : unit
   const chartKey = `${selectedId}:${league}:${interval}:${chartUnit}`
 
   useEffect(() => { localStorage.setItem('poe2-favorites', JSON.stringify(favorites)) }, [favorites])
@@ -410,8 +411,11 @@ export default function App() {
   const marketPrice = (market: Market) => market.id === 'exchange:Currency:exalted'
     ? chaosMarket?.price_divine ? price(market.price_divine / chaosMarket.price_divine) : '—'
     : displayPrice(market.price_divine)
+  const marketRowPrice = (market: Market) => market.id === 'exchange:Currency:exalted'
+    ? chaosMarket?.price_divine ? compactPrice(market.price_divine / chaosMarket.price_divine) : '—'
+    : compactPrice(unit === 'exalted' ? market.price_divine * (data?.exalted_per_divine || 0) : market.price_divine)
   const marketUnit = (market: Market) => market.id === 'exchange:Currency:exalted' ? '카오스 / 1 엑잘' : unitLabel
-  const selectedPriceText = selected && exaltedChaos ? (chaosMarket?.price_divine ? price(selected.price_divine / chaosMarket.price_divine) : '—') : selected ? (liveQuote
+  const selectedPriceText = selected && chaosReference ? (chaosMarket?.price_divine ? price(selected.price_divine / chaosMarket.price_divine) : '—') : selected ? (liveQuote
     ? price(unit === 'exalted' ? liveQuote.price_exalted : (liveQuote.price_divine ?? selected.price_divine))
     : displayPrice(selected.price_divine)) : '—'
   const toggleFavorite = (id: string) => setFavorites(items => items.includes(id) ? items.filter(x => x !== id) : [...items, id])
@@ -464,8 +468,8 @@ export default function App() {
         </div>
         <div className="main-grid">
           <section className="panel chart-panel"><div className="panel-head chart-head"><div className="selected-title">{selected ? <MarketIcon market={selected} size="large"/> : <span className="market-icon large"><Coins/></span>}<div><div className="selected-sub">{selected?.category_label || 'MARKET'} {selected?.base_type ? `· ${selected.base_type}` : ''}</div><h2>{selected?.name || (loading ? '시세를 불러오는 중...' : '아이템을 선택하세요')}</h2></div></div><button className={`favorite-button ${selected && favorites.includes(selected.id) ? 'saved' : ''}`} title="관심 목록" disabled={!selected} onClick={() => selected && toggleFavorite(selected.id)}><Star size={19} fill={selected && favorites.includes(selected.id) ? 'currentColor' : 'none'}/></button></div>
-            <div className="price-line"><strong>{selectedPriceText} <em>{exaltedChaos ? '카오스 / 1 엑잘' : unitLabel}</em></strong><span className={`price-change ${changeClass(selected?.trend_percent ?? null)}`}>{changeText(selected?.trend_percent ?? null)} <small>poe.ninja 변동</small></span></div>
-            {liveQuote && !exaltedChaos && <div className="live-source">Trade2 매물 호가 · 중앙값 {price(liveQuote.price_exalted)} 엑잘{liveQuote.count != null ? ` · ${liveQuote.count}개 매물` : ''} · {timeAgo(liveQuote.observed_at)}</div>}<div className="chart-toolbar"><div className="intervals">{intervals.map(item => <button key={item} className={interval === item ? 'active' : ''} onClick={() => setInterval(item)}>{labels[item]}</button>)}</div>{exaltedChaos ? <div className="units special-unit">1 엑잘 = 카오스</div> : <div className="units"><button className={unit === 'divine' ? 'active' : ''} onClick={() => setUnit('divine')}>신성</button><button className={unit === 'exalted' ? 'active' : ''} onClick={() => setUnit('exalted')}>엑잘</button></div>}</div>
+            <div className="price-line"><strong>{selectedPriceText} <em>{chaosReference ? `카오스 / 1 ${selectedId === 'exchange:Currency:divine' ? '신성' : '엑잘'}` : unitLabel}</em></strong><span className={`price-change ${changeClass(selected?.trend_percent ?? null)}`}>{changeText(selected?.trend_percent ?? null)} <small>poe.ninja 변동</small></span></div>
+            {liveQuote && !chaosReference && <div className="live-source">Trade2 매물 호가 · 중앙값 {price(liveQuote.price_exalted)} 엑잘{liveQuote.count != null ? ` · ${liveQuote.count}개 매물` : ''} · {timeAgo(liveQuote.observed_at)}</div>}<div className="chart-toolbar"><div className="intervals">{intervals.map(item => <button key={item} className={interval === item ? 'active' : ''} onClick={() => setInterval(item)}>{labels[item]}</button>)}</div>{chaosReference ? <div className="units special-unit">1 {selectedId === 'exchange:Currency:divine' ? '신성' : '엑잘'} = 카오스</div> : <div className="units"><button className={unit === 'divine' ? 'active' : ''} onClick={() => setUnit('divine')}>신성</button><button className={unit === 'exalted' ? 'active' : ''} onClick={() => setUnit('exalted')}>엑잘</button></div>}</div>
             <PriceChart key={chartKey} candles={candlesKey === chartKey ? candles : []} loading={chartLoading || candlesKey !== chartKey} interval={interval}/>
             <div className="chart-caption"><span><span className="caption-dot"/> {interval === '1m' ? '1분 간격 가격 관측값' : `${labels[interval]} 구간의 관측값 OHLC`}</span><span>{chartKind === 'live_listings' ? `Trade2 매물 호가 관측 · ${Math.round((data?.trade2_live_seconds || 30))}초 확인 · 체결가 아님` : `poe.ninja 시세 관측 · 선택 ${selectedCadence}분 확인 · 체결가 아님`}</span></div>
             <div className="market-facts"><div><span>마지막 성공 갱신</span><strong>{selectedSource?.fetched_at ? clock(selectedSource.fetched_at) : selected ? clock(selected.observed_at) : '—'}</strong></div><div><span>다음 자동 확인</span><strong>{selectedSource?.next_refresh_at ? clock(selectedSource.next_refresh_at) : `${selectedCadence}분 주기`}</strong></div><div><span>캐시 상태</span><strong>{selectedSource ? `${selectedSource.cache_state === 'fresh' ? '정상' : selectedSource.cache_state === 'error' ? '오류 · 이전 값' : '갱신 대기'}${selectedSource.conditional_cache ? ' · ETag' : ''}` : '—'}</strong></div><div><span>{selected?.source_kind === 'stash' ? '현재 매물' : '거래 규모'}</span><strong>{selected ? selected.source_kind === 'stash' ? `${nfmt(selected.listing_count || 0)}개` : selected.volume_divine != null ? `${nfmt(selected.volume_divine)} 신성` : '—' : '—'}</strong></div></div>
@@ -492,7 +496,7 @@ export default function App() {
                 <button className={`market-row-star ${favorites.includes(m.id) ? 'saved' : ''}`} title={favorites.includes(m.id) ? '관심 해제' : '관심 등록'} aria-label={`${m.name} ${favorites.includes(m.id) ? '관심 해제' : '관심 등록'}`} onClick={() => toggleFavorite(m.id)}><Star size={15} fill={favorites.includes(m.id) ? 'currentColor' : 'none'}/></button>
                 <button aria-current={m.id === selectedId ? 'true' : undefined} className="market-row-select" onClick={() => setSelectedId(m.id)} title={m.name}>
                   <span className="market-row-name"><MarketIcon market={m}/><span><strong>{m.name}</strong><small>{m.category_label}{m.base_type ? ` · ${m.base_type}` : ''}</small></span></span>
-                  <span className="market-row-price">{marketPrice(m)}{m.id === 'exchange:Currency:exalted' && <small> 카오스</small>}</span>
+                  <span className="market-row-price">{marketRowPrice(m)}{m.id === 'exchange:Currency:exalted' && <small> 카오스</small>}</span>
                   <span className={`market-row-change ${changeClass(m.trend_percent)}`}>{changeText(m.trend_percent)}</span>
                 </button>
               </div>)}
