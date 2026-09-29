@@ -207,6 +207,7 @@ export default function App() {
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('all')
+  const [categoryOpen, setCategoryOpen] = useState(false)
   const [exchangeCategory, setExchangeCategory] = useState('Currency')
   const [exchangeQuery, setExchangeQuery] = useState('')
   const [exchangeSort, setExchangeSort] = useState<'game' | 'price'>('game')
@@ -226,6 +227,7 @@ export default function App() {
   const [favorites, setFavorites] = useState<string[]>(initialFavorites)
   const [recentIds, setRecentIds] = useState<string[]>(initialRecent)
   const [unit, setUnit] = useState<'divine'|'exalted'>('exalted')
+  const [marketListUnit, setMarketListUnit] = useState<'divine'|'exalted'>('exalted')
   const [scout, setScout] = useState<Scout | null>(null)
   const [liveQuote, setLiveQuote] = useState<LiveQuote | null>(null)
   const [chartKind, setChartKind] = useState<'observed_snapshots' | 'live_listings'>('observed_snapshots')
@@ -439,9 +441,8 @@ export default function App() {
     const value = market.price_divine / exaltedMarket.price_divine
     return {value: price(value), unit: '엑잘'}
   }
-  const marketRowPrice = (market: Market) => market.id === 'exchange:Currency:exalted'
-    ? chaosMarket?.price_divine ? compactPrice(market.price_divine / chaosMarket.price_divine) : '—'
-    : compactPrice(unit === 'exalted' ? market.price_divine * (data?.exalted_per_divine || 0) : market.price_divine)
+  const marketRowPrice = (market: Market) => compactPrice(marketListUnit === 'exalted' ? market.price_divine * (data?.exalted_per_divine || 0) : market.price_divine)
+  const selectedCategoryLabel = category === 'all' ? '전체 분류' : data?.categories[category] || category
   const summaryExalted = (market: Market) => exaltedMarket?.price_divine ? price(market.price_divine / exaltedMarket.price_divine) : '—'
   const summaryChaos = (market: Market) => chaosMarket?.price_divine ? price(market.price_divine / chaosMarket.price_divine) : '—'
   const selectedPriceText = selected && chaosReference && unit === 'exalted' ? (chaosMarket?.price_divine ? price(selected.price_divine / chaosMarket.price_divine) : '—') : selected ? (liveQuote
@@ -512,12 +513,13 @@ export default function App() {
             </div>
             <div className="market-filters">
               <label className="market-search"><Search size={16}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="아이템 이름 검색" aria-label="아이템 이름 검색"/>{query && <button type="button" title="검색어 지우기" onClick={() => setQuery('')}><X size={14}/></button>}</label>
-              <label className="market-category"><select value={category} onChange={e => setCategory(e.target.value)} aria-label="아이템 분류"><option value="all">전체 분류</option>{Object.entries(data?.categories || {}).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select><ChevronDown size={14}/></label>
+              <div className={`market-category-menu ${categoryOpen ? 'open' : ''}`}><button className="market-category-trigger" aria-haspopup="listbox" aria-expanded={categoryOpen} onClick={() => setCategoryOpen(open => !open)}><span>{selectedCategoryLabel}</span><ChevronDown size={15}/></button>{categoryOpen && <div className="market-category-options" role="listbox" aria-label="아이템 분류"><button role="option" aria-selected={category === 'all'} className={category === 'all' ? 'selected' : ''} onClick={() => {setCategory('all'); setCategoryOpen(false)}}>전체 분류</button>{Object.entries(data?.categories || {}).map(([key, label]) => <button key={key} role="option" aria-selected={category === key} className={category === key ? 'selected' : ''} onClick={() => {setCategory(key); setCategoryOpen(false)}}>{label}</button>)}</div>}</div>
+              <div className="market-list-units" aria-label="아이템 목록 가격 단위"><button className={marketListUnit === 'exalted' ? 'active' : ''} onClick={() => setMarketListUnit('exalted')}>엑잘</button><button className={marketListUnit === 'divine' ? 'active' : ''} onClick={() => setMarketListUnit('divine')}>신성</button></div>
             </div>
             <div className="market-list-head">
               <span aria-hidden="true"/>
               <button className={marketSort === 'name' ? 'active' : ''} onClick={() => changeSort('name')}>종목명 <span>{marketSort === 'name' ? sortDescending ? '↓' : '↑' : '↕'}</span></button>
-              <button className={marketSort === 'price' ? 'active' : ''} onClick={() => changeSort('price')}>현재가 <small>({unitLabel})</small> <span>{marketSort === 'price' ? sortDescending ? '↓' : '↑' : '↕'}</span></button>
+              <button className={marketSort === 'price' ? 'active' : ''} onClick={() => changeSort('price')}>현재가 <small>({marketListUnit === 'divine' ? '신성' : '엑잘'})</small> <span>{marketSort === 'price' ? sortDescending ? '↓' : '↑' : '↕'}</span></button>
               <button className={marketSort === 'change' ? 'active' : ''} onClick={() => changeSort('change')}>최근 변동 <span>{marketSort === 'change' ? sortDescending ? '↓' : '↑' : '↕'}</span></button>
             </div>
             <div className="market-list" aria-label="아이템 종목">
@@ -525,7 +527,7 @@ export default function App() {
                 <button className={`market-row-star ${favorites.includes(m.id) ? 'saved' : ''}`} title={favorites.includes(m.id) ? '관심 해제' : '관심 등록'} aria-label={`${m.name} ${favorites.includes(m.id) ? '관심 해제' : '관심 등록'}`} onClick={() => toggleFavorite(m.id)}><Star size={15} fill={favorites.includes(m.id) ? 'currentColor' : 'none'}/></button>
                 <button aria-current={m.id === selectedId ? 'true' : undefined} className="market-row-select" onClick={() => setSelectedId(m.id)} title={m.name}>
                   <span className="market-row-name"><MarketIcon market={m}/><span><span className="market-name-line"><strong>{m.name}</strong><MarketLiquidityWarning market={m}/></span><small>{m.category_label}{m.base_type ? ` · ${m.base_type}` : ''}</small></span></span>
-                  <span className="market-row-price">{marketRowPrice(m)}{m.id === 'exchange:Currency:exalted' && <small> 카오스</small>}</span>
+                  <span className="market-row-price">{marketRowPrice(m)} <small>{marketListUnit === 'divine' ? '신성' : '엑잘'}</small></span>
                   <span className={`market-row-change ${changeClass(m.trend_percent)}`}>{changeText(m.trend_percent)}</span>
                 </button>
               </div>)}
