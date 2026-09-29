@@ -330,6 +330,10 @@ export default function App() {
   const displayPrice = (value: number) => price(unit === 'exalted' ? value * (data?.exalted_per_divine || 0) : value)
   const unitLabel = unit === 'divine' ? '신성' : '엑잘'
   const chaosMarket = data?.markets.find(m => m.id === 'exchange:Currency:chaos')
+  const marketPrice = (market: Market) => market.id === 'exchange:Currency:exalted'
+    ? chaosMarket?.price_divine ? price(market.price_divine / chaosMarket.price_divine) : '—'
+    : displayPrice(market.price_divine)
+  const marketUnit = (market: Market) => market.id === 'exchange:Currency:exalted' ? '카오스 / 1 엑잘' : unitLabel
   const selectedPriceText = selected && exaltedChaos ? (chaosMarket?.price_divine ? price(selected.price_divine / chaosMarket.price_divine) : '—') : selected ? (liveQuote
     ? price(unit === 'exalted' ? liveQuote.price_exalted : (liveQuote.price_divine ?? selected.price_divine))
     : displayPrice(selected.price_divine)) : '—'
@@ -367,7 +371,7 @@ export default function App() {
         {error && <div className="error-banner">{error}<button onClick={() => void fetchMarkets(true)}>다시 시도</button></div>}
         <div className="summary-grid">
           <div className="summary-card primary"><div className="summary-icon"><Coins size={20}/></div><span>등록된 시세</span><strong>{loading && !data ? '—' : nfmt(data?.markets.length || 0)}</strong><small>개 아이템 추적 중</small><div className="summary-decoration"/></div>
-          {currencyMarkets.filter(m => m.id !== 'exchange:Currency:divine').map(m => <button key={m.id} className="summary-card quote" onClick={() => setSelectedId(m.id)}><span className="summary-label"><MarketIcon market={m}/>{m.name}</span><strong>{displayPrice(m.price_divine)} <em>{unitLabel}</em></strong><span className={`summary-change ${changeClass(m.trend_percent)}`}>{m.trend_percent != null && (m.trend_percent >= 0 ? <ArrowUpRight size={15}/> : <ArrowDownRight size={15}/>)}{changeText(m.trend_percent)} <small>최근 변동</small></span></button>)}
+          {currencyMarkets.filter(m => m.id !== 'exchange:Currency:divine').map(m => <button key={m.id} className="summary-card quote" onClick={() => setSelectedId(m.id)}><span className="summary-label"><MarketIcon market={m}/>{m.name}</span><strong>{marketPrice(m)} <em>{marketUnit(m)}</em></strong><span className={`summary-change ${changeClass(m.trend_percent)}`}>{m.trend_percent != null && (m.trend_percent >= 0 ? <ArrowUpRight size={15}/> : <ArrowDownRight size={15}/>)}{changeText(m.trend_percent)} <small>최근 변동</small></span></button>)}
           <div className="summary-card update"><div className="summary-icon pale"><Clock3 size={19}/></div><span>전체 시장 캐시</span><strong>{lastFetched ? timeAgo(lastFetched) : '수집 중'}</strong><small>{lastFetched ? `${marketCadence}분 주기 · 다음 ${nextMarketRefresh > 0 ? clock(nextMarketRefresh) : '대기'}` : '공개 API 연결 중'}</small></div>
         </div>
         <div className="main-grid">
@@ -400,7 +404,7 @@ export default function App() {
                 <button className={`market-row-star ${favorites.includes(m.id) ? 'saved' : ''}`} title={favorites.includes(m.id) ? '관심 해제' : '관심 등록'} aria-label={`${m.name} ${favorites.includes(m.id) ? '관심 해제' : '관심 등록'}`} onClick={() => toggleFavorite(m.id)}><Star size={15} fill={favorites.includes(m.id) ? 'currentColor' : 'none'}/></button>
                 <button aria-current={m.id === selectedId ? 'true' : undefined} className="market-row-select" onClick={() => setSelectedId(m.id)} title={m.name}>
                   <span className="market-row-name"><MarketIcon market={m}/><span><strong>{m.name}</strong><small>{m.category_label}{m.base_type ? ` · ${m.base_type}` : ''}</small></span></span>
-                  <span className="market-row-price">{displayPrice(m.price_divine)}</span>
+                  <span className="market-row-price">{marketPrice(m)}{m.id === 'exchange:Currency:exalted' && <small> 카오스</small>}</span>
                   <span className={`market-row-change ${changeClass(m.trend_percent)}`}>{changeText(m.trend_percent)}</span>
                 </button>
               </div>)}
