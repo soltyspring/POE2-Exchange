@@ -4,7 +4,7 @@ Python + React로 만든 개인용 PoE2 시세 대시보드입니다. 기본 시
 
 ## 실행
 
-Python 3.11+와 Node.js 20.19+가 필요합니다.
+Python 3.10+와 Node.js 20.19+가 필요합니다.
 
 ```powershell
 cd backend
@@ -44,26 +44,26 @@ npm run dev
 
 ## Ubuntu에서 계속 수집
 
-`deploy/poe2-market.service`는 우분투에서 백엔드를 부팅 시 자동 시작하고 오류 시 재시작합니다. 기본 설치 위치는 `/home/ubuntu/POE2-Exchange`이고 DB는 Git 밖의 `/var/lib/poe2-market/prices.sqlite3`에 둡니다.
+`solty@192.168.0.50`에서는 sudo 권한 없이 사용자 crontab이 1분마다 수집기 실행 상태를 확인합니다. `flock`으로 중복 실행을 막고 백엔드는 서버 내부 `127.0.0.1:18080`에 바인딩합니다. DB는 Git에서 제외한 `~/POE2-Exchange/data/prices.sqlite3`에 누적됩니다.
 
 ```bash
 git clone https://github.com/soltyspring/POE2-Exchange.git ~/POE2-Exchange
 cd ~/POE2-Exchange/backend
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
-sudo cp ../deploy/poe2-market.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now poe2-market
-systemctl status poe2-market
-curl http://127.0.0.1:8000/api/health
+chmod +x ../deploy/run_collector.sh
+mkdir -p ../runtime
+(crontab -l; echo '* * * * * /home/solty/POE2-Exchange/deploy/run_collector.sh >> /home/solty/POE2-Exchange/runtime/collector.log 2>&1 # poe2-market') | crontab -
+../deploy/run_collector.sh
+curl http://127.0.0.1:18080/api/health
 ```
 
-서비스는 서버 내부의 `127.0.0.1:8000`에만 바인딩합니다. 개인 PC에서 원격 DB를 조회할 때는 SSH 포트 포워딩을 사용하세요. 배포 후 코드를 갱신할 때는 `git pull`, 의존성 설치, `sudo systemctl restart poe2-market` 순서로 진행합니다.
+위 `run_collector.sh` 명령은 수집기가 실행되는 동안 계속 점유합니다. 별도 셸에서 상태를 확인하세요. 코드 갱신은 `git pull`과 의존성 설치 후 수집기 프로세스를 재시작합니다. 과거 가격은 `cd backend && .venv/bin/python backfill_scout.py --league 'Forbidden Rites'`로 별도 출처 테이블에 가져옵니다. POE2Scout 응답은 체결 건별 로그가 아닌 과거 가격 관측값이며, 데이터가 충분한 화폐에 한해 요일·시간대 분석에 사용합니다.
 
 로컬 화면을 우분투 데이터에 연결하려면 SSH 터널을 연 뒤 프런트엔드를 다시 실행합니다. 서버 주소와 키 경로는 본인 환경에 맞게 바꿉니다.
 
 ```powershell
-ssh -N -L 18000:127.0.0.1:8000 -i <키 경로> ubuntu@<서버 주소>
+ssh -N -L 18000:127.0.0.1:18080 -i C:\Users\aghose\.ssh\ssh-key-2025-09-27.key solty@192.168.0.50
 ```
 
 다른 터미널에서:
