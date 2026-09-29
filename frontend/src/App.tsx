@@ -174,10 +174,10 @@ function MarketLiquidityWarning({market}: {market: Market}) {
   const lowListings = market.source_kind === 'stash' && market.listing_count != null && market.listing_count < 20
   const lowVolume = market.source_kind !== 'stash' && market.volume_divine != null && market.volume_divine < 10
   if (!lowListings && !lowVolume) return null
-  const label = lowListings ? `매물 적음 · ${nfmt(market.listing_count || 0)}개` : `거래량 적음 · ${nfmt(market.volume_divine || 0, 3)} 신성`
+  const label = lowListings ? '매물 적음' : '거래량 적음'
   const detail = lowListings
-    ? `현재 매물이 ${nfmt(market.listing_count || 0)}개뿐이라 표시 가격의 오차가 클 수 있습니다.`
-    : `최근 거래 규모가 ${nfmt(market.volume_divine || 0, 3)} 신성으로 작아 표시 가격의 오차가 클 수 있습니다.`
+    ? '현재 매물이 적어 표시 가격의 오차가 클 수 있습니다.'
+    : '최근 거래량이 적어 표시 가격의 오차가 클 수 있습니다.'
   return <span className="liquidity-warning" tabIndex={0} aria-label={detail}>
     <TriangleAlert size={14} fill="currentColor"/>
     <span>{label}</span>
