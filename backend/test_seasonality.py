@@ -39,7 +39,7 @@ class SeasonalityTests(unittest.TestCase):
     def test_full_market_snapshot_is_idempotent_and_requires_fresh_source(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(app, "DB_PATH", Path(directory) / "prices.sqlite3"):
             app.init_db()
-            now = int(time.time())
+            now = int(time.time()) // app.HISTORY_SNAPSHOT_SECONDS * app.HISTORY_SNAPSHOT_SECONDS + 100
             with app.connect() as db:
                 db.execute("""INSERT INTO markets VALUES
                     ('Test','exchange:Currency:exalted','Currency','화폐','엑잘티드 오브',NULL,
@@ -60,6 +60,19 @@ class SeasonalityTests(unittest.TestCase):
             prices = {row["market_id"]: row["price_exalted"] for row in rows}
             self.assertAlmostEqual(prices["exchange:Currency:exalted"], 1)
             self.assertAlmostEqual(prices["exchange:Currency:divine"], 500)
+            with app.connect() as db:
+                db.execute("""UPDATE markets SET price_divine=1.1
+                    WHERE league='Test' AND id='exchange:Currency:divine'""")
+                db.execute("UPDATE fetch_state SET fetched_at=? WHERE league='Test' AND category='Currency'",
+                           (now + 1,))
+            db.close()
+            app.sample_market_snapshots("Test", now + 1)
+            with app.connect() as db:
+                updated = db.execute("""SELECT s.price_exalted FROM market_snapshots s
+                    JOIN market_keys k ON k.id=s.market_key
+                    WHERE k.league='Test' AND k.market_id='exchange:Currency:divine'""").fetchone()[0]
+            db.close()
+            self.assertAlmostEqual(updated, 550)
             gc.collect()
 
     def test_korean_weekday_hour_and_minimum_history(self):

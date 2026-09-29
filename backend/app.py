@@ -379,7 +379,7 @@ def sample_market_snapshots(league: str, now: int | None = None):
     with connect() as db:
         db.execute("""INSERT OR IGNORE INTO market_keys (league, market_id)
             SELECT league, id FROM markets WHERE league=?""", (league,))
-        db.execute("""INSERT OR IGNORE INTO market_snapshots
+        db.execute("""INSERT INTO market_snapshots
             (market_key,bucket_start,price_divine,price_exalted,source_checked_at)
             SELECT k.id,?,m.price_divine,
               CASE WHEN ex.price_divine > 0 THEN m.price_divine/ex.price_divine ELSE NULL END,
@@ -388,7 +388,12 @@ def sample_market_snapshots(league: str, now: int | None = None):
             JOIN market_keys k ON k.league=m.league AND k.market_id=m.id
             JOIN fetch_state f ON f.league=m.league AND f.category=m.category
             LEFT JOIN markets ex ON ex.league=m.league AND ex.id='exchange:Currency:exalted'
-            WHERE m.league=? AND f.error IS NULL AND f.fetched_at >= ?""",
+            WHERE m.league=? AND f.error IS NULL AND f.fetched_at >= ?
+            ON CONFLICT(market_key,bucket_start) DO UPDATE SET
+              price_divine=excluded.price_divine,
+              price_exalted=excluded.price_exalted,
+              source_checked_at=excluded.source_checked_at
+            WHERE excluded.source_checked_at > market_snapshots.source_checked_at""",
             (bucket_start, league, now - MARKET_POLL_SECONDS * 2))
 
 
