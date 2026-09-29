@@ -2,6 +2,11 @@
 set -eu
 repo="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 mkdir -p "$repo/runtime" "$repo/data"
+if [ -f "$repo/.env" ]; then
+  set -a
+  . "$repo/.env"
+  set +a
+fi
 export POE_DB_PATH="$repo/data/prices.sqlite3"
 export POE_DEFAULT_LEAGUE="Forbidden Rites"
 export PYTHONDONTWRITEBYTECODE=1
