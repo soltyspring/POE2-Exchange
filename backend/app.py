@@ -157,14 +157,21 @@ def init_db():
           price_divine REAL NOT NULL, price_exalted REAL,
           PRIMARY KEY (league, market_id, minute)
         );
+        CREATE TABLE IF NOT EXISTS market_keys (
+          id INTEGER PRIMARY KEY, league TEXT NOT NULL, market_id TEXT NOT NULL,
+          UNIQUE (league, market_id)
+        );
         CREATE TABLE IF NOT EXISTS market_snapshots (
-          league TEXT NOT NULL, market_id TEXT NOT NULL, bucket_start INTEGER NOT NULL,
+          market_key INTEGER NOT NULL, bucket_start INTEGER NOT NULL,
           price_divine REAL NOT NULL, price_exalted REAL,
           source_checked_at INTEGER NOT NULL,
-          PRIMARY KEY (league, market_id, bucket_start)
-        );
-        CREATE INDEX IF NOT EXISTS market_snapshots_by_time
-          ON market_snapshots (league, bucket_start);
+          PRIMARY KEY (market_key, bucket_start)
+        ) WITHOUT ROWID;
+        CREATE TABLE IF NOT EXISTS external_price_history (
+          market_key INTEGER NOT NULL, source TEXT NOT NULL, sample_at INTEGER NOT NULL,
+          price_exalted REAL NOT NULL, fetched_at INTEGER NOT NULL,
+          PRIMARY KEY (market_key, source, sample_at)
+        ) WITHOUT ROWID;
         CREATE TABLE IF NOT EXISTS live_observations (
           league TEXT NOT NULL, market_id TEXT NOT NULL, minute INTEGER NOT NULL,
           price_divine REAL, price_exalted REAL NOT NULL,
@@ -198,6 +205,23 @@ def init_db():
         observation_columns = {r["name"] for r in db.execute("PRAGMA table_info(observations)")}
         if "price_exalted" not in observation_columns:
             db.execute("ALTER TABLE observations ADD COLUMN price_exalted REAL")
+        snapshot_columns = {r["name"] for r in db.execute("PRAGMA table_info(market_snapshots)")}
+        if "league" in snapshot_columns:
+            db.execute("ALTER TABLE market_snapshots RENAME TO market_snapshots_legacy")
+            db.execute("DROP INDEX IF EXISTS market_snapshots_by_time")
+            db.execute("""CREATE TABLE market_snapshots (
+                market_key INTEGER NOT NULL, bucket_start INTEGER NOT NULL,
+                price_divine REAL NOT NULL, price_exalted REAL,
+                source_checked_at INTEGER NOT NULL,
+                PRIMARY KEY (market_key, bucket_start)) WITHOUT ROWID""")
+            db.execute("""INSERT OR IGNORE INTO market_keys (league, market_id)
+                SELECT DISTINCT league, market_id FROM market_snapshots_legacy""")
+            db.execute("""INSERT INTO market_snapshots
+                SELECT k.id, s.bucket_start, s.price_divine, s.price_exalted, s.source_checked_at
+                FROM market_snapshots_legacy s JOIN market_keys k
+                  ON k.league=s.league AND k.market_id=s.market_id""")
+            db.execute("DROP TABLE market_snapshots_legacy")
+        db.execute("CREATE INDEX IF NOT EXISTS market_snapshots_by_time ON market_snapshots (bucket_start)")
 
 
 def translate_existing_markets():
@@ -353,12 +377,15 @@ def sample_market_snapshots(league: str, now: int | None = None):
     now = int(time.time()) if now is None else now
     bucket_start = now // HISTORY_SNAPSHOT_SECONDS * HISTORY_SNAPSHOT_SECONDS
     with connect() as db:
+        db.execute("""INSERT OR IGNORE INTO market_keys (league, market_id)
+            SELECT league, id FROM markets WHERE league=?""", (league,))
         db.execute("""INSERT OR IGNORE INTO market_snapshots
-            (league,market_id,bucket_start,price_divine,price_exalted,source_checked_at)
-            SELECT m.league,m.id,?,m.price_divine,
+            (market_key,bucket_start,price_divine,price_exalted,source_checked_at)
+            SELECT k.id,?,m.price_divine,
               CASE WHEN ex.price_divine > 0 THEN m.price_divine/ex.price_divine ELSE NULL END,
               f.fetched_at
             FROM markets m
+            JOIN market_keys k ON k.league=m.league AND k.market_id=m.id
             JOIN fetch_state f ON f.league=m.league AND f.category=m.category
             LEFT JOIN markets ex ON ex.league=m.league AND ex.id='exchange:Currency:exalted'
             WHERE m.league=? AND f.error IS NULL AND f.fetched_at >= ?""",
@@ -370,9 +397,21 @@ def seasonality(league: str, market_id: str, days: int, unit: str):
     column = "price_exalted" if unit == "exalted" else "price_divine"
     since = int(time.time()) - days * 86400
     with connect() as db:
-        rows = db.execute(f"""SELECT bucket_start, {column} AS price FROM market_snapshots
-            WHERE league=? AND market_id=? AND bucket_start>=? AND {column}>0
+        rows = db.execute(f"""SELECT s.bucket_start, s.{column} AS price FROM market_snapshots s
+            JOIN market_keys k ON k.id=s.market_key
+            WHERE k.league=? AND k.market_id=? AND s.bucket_start>=? AND s.{column}>0
             ORDER BY bucket_start""", (league, market_id, since)).fetchall()
+        source = "poe.ninja"
+        if unit == "exalted" and len(rows) < 100 and market_id.startswith("exchange:Currency:"):
+            historical = db.execute("""SELECT h.sample_at AS bucket_start,
+                h.price_exalted AS price FROM external_price_history h
+                JOIN market_keys k ON k.id=h.market_key
+                WHERE k.league=? AND k.market_id=? AND h.source='poe2scout'
+                  AND h.sample_at>=? AND h.price_exalted>0 ORDER BY h.sample_at""",
+                (league, market_id, since)).fetchall()
+            if len(historical) >= 100:
+                rows = historical
+                source = "poe2scout"
     by_date: dict[str, list[tuple[int, float]]] = {}
     for row in rows:
         local = datetime.fromtimestamp(row["bucket_start"], SEOUL)
@@ -396,6 +435,7 @@ def seasonality(league: str, market_id: str, days: int, unit: str):
     span_days = ((rows[-1]["bucket_start"] - rows[0]["bucket_start"]) / 86400) if len(rows) > 1 else 0
     best = min(eligible, key=lambda item: item["relative_percent"]) if eligible and span_days >= 21 else None
     return {"league": league, "market_id": market_id, "unit": unit,
+            "source": source,
             "timezone": "Asia/Seoul", "lookback_days": days,
             "first_sample_at": rows[0]["bucket_start"] if rows else None,
             "last_sample_at": rows[-1]["bucket_start"] if rows else None,
@@ -889,7 +929,8 @@ def health():
         if not league:
             active = db.execute("SELECT league FROM markets ORDER BY observed_at DESC LIMIT 1").fetchone()
             league = active[0] if active else None
-        row = db.execute("SELECT MAX(bucket_start) FROM market_snapshots WHERE league=?",
+        row = db.execute("""SELECT MAX(s.bucket_start) FROM market_snapshots s
+            JOIN market_keys k ON k.id=s.market_key WHERE k.league=?""",
                          (league,)).fetchone() if league else None
     latest = row[0] if row else None
     return {"ok": True, "time": int(time.time()), "league": league,

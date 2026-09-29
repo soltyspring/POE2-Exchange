@@ -22,13 +22,15 @@ class SeasonalityTests(unittest.TestCase):
                         1.0, None, None, None, "exchange", now)
             app.save_markets("Test", [row("kept"), row("removed")])
             with app.connect() as db:
+                db.execute("INSERT INTO market_keys (league,market_id) VALUES ('Test','removed')")
                 db.execute("""INSERT INTO market_snapshots VALUES
-                    ('Test','removed',?,1,1,?)""", (now, now))
+                    ((SELECT id FROM market_keys WHERE league='Test' AND market_id='removed'),?,1,1,?)""", (now, now))
             db.close()
             app.save_markets("Test", [row("kept")])
             with app.connect() as db:
                 current = [item[0] for item in db.execute("SELECT id FROM markets")]
-                history = db.execute("SELECT COUNT(*) FROM market_snapshots WHERE market_id='removed'").fetchone()[0]
+                history = db.execute("""SELECT COUNT(*) FROM market_snapshots s JOIN market_keys k
+                    ON k.id=s.market_key WHERE k.market_id='removed'""").fetchone()[0]
             db.close()
             self.assertEqual(current, ["kept"])
             self.assertEqual(history, 1)
@@ -51,7 +53,8 @@ class SeasonalityTests(unittest.TestCase):
             app.sample_market_snapshots("Test", now)
             app.sample_market_snapshots("Test", now)
             with app.connect() as db:
-                rows = db.execute("SELECT market_id,price_exalted FROM market_snapshots ORDER BY market_id").fetchall()
+                rows = db.execute("""SELECT k.market_id,s.price_exalted FROM market_snapshots s
+                    JOIN market_keys k ON k.id=s.market_key ORDER BY k.market_id""").fetchall()
             db.close()
             self.assertEqual(len(rows), 2)
             prices = {row["market_id"]: row["price_exalted"] for row in rows}
@@ -66,13 +69,14 @@ class SeasonalityTests(unittest.TestCase):
             today = datetime.now(zone).date()
             start = today - timedelta(days=35)
             with app.connect() as db:
+                db.execute("INSERT INTO market_keys (league,market_id) VALUES ('Test','item')")
                 for offset in range(28):
                     day = start + timedelta(days=offset)
                     for hour in (9, 12, 18):
                         local = datetime(day.year, day.month, day.day, hour, tzinfo=zone)
                         value = 90 if day.weekday() == 0 and hour == 9 else 100
                         db.execute("""INSERT INTO market_snapshots VALUES
-                            ('Test','item',?,?,?,?)""", (int(local.timestamp()), value, value, int(local.timestamp())))
+                            ((SELECT id FROM market_keys WHERE league='Test' AND market_id='item'),?,?,?,?)""", (int(local.timestamp()), value, value, int(local.timestamp())))
             db.close()
             result = app.seasonality("Test", "item", 56, "exalted")
             self.assertEqual(result["best_slot"]["weekday"], 0)
