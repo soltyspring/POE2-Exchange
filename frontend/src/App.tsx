@@ -172,6 +172,7 @@ export default function App() {
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [marketSort, setMarketSort] = useState<MarketSort>('price')
   const [sortDescending, setSortDescending] = useState(true)
+  const [marketLimit, setMarketLimit] = useState(160)
   const [historyDays, setHistoryDays] = useState<28 | 56 | 84>(56)
   const [seasonalityData, setSeasonalityData] = useState<Seasonality | null>(null)
   const [seasonalityLoading, setSeasonalityLoading] = useState(false)
@@ -345,6 +346,8 @@ export default function App() {
     if (bValue == null) return -1
     return (aValue - bValue) * (sortDescending ? -1 : 1) || a.name.localeCompare(b.name, 'ko-KR')
   }), [filtered, marketSort, sortDescending])
+  const visibleMarkets = sortedMarkets.slice(0, marketLimit)
+  useEffect(() => { setMarketLimit(160) }, [query, category, favoritesOnly, marketSort, sortDescending])
   const changeSort = (next: MarketSort) => {
     if (marketSort === next) setSortDescending(value => !value)
     else { setMarketSort(next); setSortDescending(next !== 'name') }
@@ -441,7 +444,7 @@ export default function App() {
               <button className={marketSort === 'change' ? 'active' : ''} onClick={() => changeSort('change')}>최근 변동 <span>{marketSort === 'change' ? sortDescending ? '↓' : '↑' : '↕'}</span></button>
             </div>
             <div className="market-list" aria-label="아이템 종목">
-              {sortedMarkets.map(m => <div className={`market-row ${m.id === selectedId ? 'selected' : ''}`} key={m.id}>
+              {visibleMarkets.map(m => <div className={`market-row ${m.id === selectedId ? 'selected' : ''}`} key={m.id}>
                 <button className={`market-row-star ${favorites.includes(m.id) ? 'saved' : ''}`} title={favorites.includes(m.id) ? '관심 해제' : '관심 등록'} aria-label={`${m.name} ${favorites.includes(m.id) ? '관심 해제' : '관심 등록'}`} onClick={() => toggleFavorite(m.id)}><Star size={15} fill={favorites.includes(m.id) ? 'currentColor' : 'none'}/></button>
                 <button aria-current={m.id === selectedId ? 'true' : undefined} className="market-row-select" onClick={() => setSelectedId(m.id)} title={m.name}>
                   <span className="market-row-name"><MarketIcon market={m}/><span><strong>{m.name}</strong><small>{m.category_label}{m.base_type ? ` · ${m.base_type}` : ''}</small></span></span>
@@ -450,6 +453,7 @@ export default function App() {
                 </button>
               </div>)}
               {!sortedMarkets.length && <div className="market-list-empty"><Search size={21}/><strong>{loading ? '시세를 불러오는 중입니다' : favoritesOnly && !watchlist.length ? '관심 아이템이 없습니다' : '검색 결과가 없습니다'}</strong><span>{favoritesOnly && !watchlist.length ? '종목의 별표를 눌러 추가하세요.' : '검색어 또는 분류를 변경해 보세요.'}</span></div>}
+              {visibleMarkets.length < sortedMarkets.length && <button className="market-load-more" onClick={() => setMarketLimit(limit => limit + 160)}>더 보기 <span>{nfmt(visibleMarkets.length)} / {nfmt(sortedMarkets.length)}</span></button>}
             </div>
             <div className="market-panel-foot"><span>종목 선택 시 차트가 변경됩니다</span><span>시세 {marketCadence}분 확인</span></div>
           </section>
