@@ -26,7 +26,9 @@ BASE = "https://poe.ninja/poe2/api/economy"
 EXCHANGE_TYPES = {
     "Currency": "화폐", "Essences": "에센스", "LineageSupportGems": "혈통 보조젬",
     "Runes": "룬", "SoulCores": "영혼핵", "Ritual": "징조",
-    "Breach": "촉매", "Delirium": "액상 감정",
+    "Breach": "촉매", "Delirium": "액상 감정", "Fragments": "조각",
+    "Abyss": "심연", "UncutGems": "미가공 젬", "Idols": "우상",
+    "Expedition": "탐험", "Verisium": "베리시움",
 }
 STASH_TYPES = {
     "UniqueWeapons": "고유 무기", "UniqueArmours": "고유 방어구",
