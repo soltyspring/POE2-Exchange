@@ -39,6 +39,11 @@ STASH_TYPES = {
 CATEGORIES = {**EXCHANGE_TYPES, **STASH_TYPES}
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = Path(os.getenv("POE_DB_PATH", str(ROOT / "data" / "prices.sqlite3")))
+AI_API_KEY = os.getenv("POE_AI_API_KEY", "").strip()
+AI_API_URL = os.getenv("POE_AI_API_URL", "https://api.openai.com/v1/chat/completions").strip()
+AI_MODEL = os.getenv("POE_AI_MODEL", "gpt-4.1-mini").strip()
+AI_SUMMARY_CACHE: dict[str, tuple[float, dict]] = {}
+AI_SUMMARY_TTL = 3600
 USER_AGENT = os.getenv(
     "POE_NINJA_USER_AGENT", "Poe2MinuteChart/0.1 (personal local dashboard; contact: local operator)"
 )
@@ -590,6 +595,40 @@ def seasonality(league: str, market_id: str, days: int, unit: str):
             "cells": cells, "best_slot": best}
 
 
+def statistical_market_summary(name: str, data: dict) -> dict:
+    eligible = [cell for cell in data["cells"] if cell["days"] >= 3]
+    highest = max(eligible, key=lambda cell: cell["relative_percent"]) if eligible else None
+    lowest = min(eligible, key=lambda cell: cell["relative_percent"]) if eligible else None
+    volumes = data["official_volume"].get("cells", [])
+    busiest = max(volumes, key=lambda cell: cell["median_volume_item"]) if volumes else None
+    days = ["월", "화", "수", "목", "금", "토", "일"]
+    slot = lambda cell: f"{days[cell['weekday']]}요일 {cell['hour']:02d}시" if cell else "자료 없음"
+    parts = []
+    if highest: parts.append(f"{name}은 {slot(highest)}에 일별 중앙값보다 {highest['relative_percent']:+.2f}% 높은 경향이 있습니다.")
+    if lowest: parts.append(f"상대적으로 낮았던 때는 {slot(lowest)}로 {lowest['relative_percent']:+.2f}%였습니다.")
+    if busiest: parts.append(f"공식 교환량은 {slot(busiest)}에 중간값 {busiest['median_volume_item']:,.0f}개로 가장 많았습니다.")
+    if not parts: parts.append("요일·시간별 경향을 판단할 표본을 더 모으고 있습니다.")
+    confidence = "높음" if data["observed_days"] >= 42 else "보통" if data["observed_days"] >= 21 else "낮음"
+    parts.append(f"{data['observed_days']}일, {data['sample_count']:,}회 관측 기준이며 신뢰도는 {confidence}입니다.")
+    return {"summary": " ".join(parts), "generated_by": "statistics", "confidence": confidence}
+
+
+async def ai_market_summary(name: str, data: dict) -> dict:
+    fallback = statistical_market_summary(name, data)
+    if not AI_API_KEY: return fallback
+    payload = {"model": AI_MODEL, "temperature": 0.2, "max_tokens": 260, "messages": [{"role": "system", "content": "POE2 시세 통계를 한국어 3~4문장으로 요약한다. 최고가·저가 경향, 거래량 집중 시간, 표본 한계를 설명하고 가격을 예측하지 않는다."}, {"role": "user", "content": json.dumps({"item": name, "statistics": fallback, "data": data}, ensure_ascii=False)}]}
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            response = await client.post(AI_API_URL, headers={"Authorization": f"Bearer {AI_API_KEY}"}, json=payload)
+            response.raise_for_status()
+            content = response.json()["choices"][0]["message"]["content"].strip()
+        return {**fallback, "summary": content, "generated_by": "ai", "model": AI_MODEL}
+    except (httpx.HTTPError, KeyError, IndexError, ValueError) as exc:
+        logging.warning("AI market summary failed: %s", exc)
+        return fallback
+
+
+
 def save_live_observation(league: str, market_id: str, quote_data: dict):
     minute = int(time.time()) // 60 * 60
     with connect() as db:
@@ -989,6 +1028,19 @@ def market_seasonality(market_id: str, league: str = Query(min_length=1),
     if not exists:
         raise HTTPException(404, "Unknown market")
     return seasonality(league, market_id, days, unit)
+
+
+@app.get("/api/market-summary/{market_id:path}")
+async def market_summary(market_id: str, league: str = Query(min_length=1), days: int = Query(default=56, ge=7, le=365), unit: str = "exalted"):
+    data = seasonality(league, market_id, days, unit)
+    with connect() as db: market = db.execute("SELECT name FROM markets WHERE league=? AND id=?", (league, market_id)).fetchone()
+    if not market: raise HTTPException(404, "Unknown market")
+    key = f"{league}:{market_id}:{days}:{unit}"
+    cached = AI_SUMMARY_CACHE.get(key)
+    if cached and time.time() - cached[0] < AI_SUMMARY_TTL: return cached[1]
+    result = await ai_market_summary(market["name"], data)
+    AI_SUMMARY_CACHE[key] = (time.time(), result)
+    return result
 
 
 @app.get("/api/candles/{market_id:path}")
