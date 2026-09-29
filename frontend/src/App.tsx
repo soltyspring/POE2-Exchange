@@ -399,14 +399,14 @@ export default function App() {
   const chaosPrice = (market: Market) => {
     if (!chaosMarket?.price_divine) return '—'
     const value = market.price_divine / chaosMarket.price_divine
-    return value > 0 && value < .000001 ? '<0.000001' : price(value)
+    return price(value)
   }
   const exaltedMarket = data?.markets.find(m => m.id === 'exchange:Currency:exalted')
   const exchangeQuote = (market: Market) => {
     if (market.id === 'exchange:Currency:exalted') return {value: chaosPrice(market), unit: '카오스'}
     if (!exaltedMarket?.price_divine) return {value: '—', unit: '엑잘'}
     const value = market.price_divine / exaltedMarket.price_divine
-    return {value: value > 0 && value < .000001 ? '<0.000001' : price(value), unit: '엑잘'}
+    return {value: price(value), unit: '엑잘'}
   }
   const marketPrice = (market: Market) => market.id === 'exchange:Currency:exalted'
     ? chaosMarket?.price_divine ? price(market.price_divine / chaosMarket.price_divine) : '—'
