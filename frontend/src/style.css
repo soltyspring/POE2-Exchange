@@ -92,3 +92,4 @@
 .seasonality-note i:first-child{margin-left:0}
 .heatmap-low{background:#7da6e4}.heatmap-high{background:#e98b9d}
 @media(max-width:760px){.seasonality-panel{padding:19px 14px}.seasonality-heading{align-items:flex-start;flex-direction:column;gap:10px}.seasonality-controls{justify-content:flex-start}.seasonality-summary{grid-template-columns:1fr;gap:6px;margin:15px 0}.seasonality-summary>div{min-height:0}.seasonality-note{line-height:1.6}}
+.special-unit{padding:6px 10px;color:#436589;background:#eef3f9;font-size:10px;font-weight:700;white-space:nowrap}
