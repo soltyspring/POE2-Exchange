@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CandlestickSeries, ColorType, LineSeries, createChart, type IChartApi, type ISeriesApi, type UTCTimestamp } from 'lightweight-charts'
 import { Activity, ChevronDown, Clock3, Coins, ExternalLink, Gift, LayoutDashboard, RefreshCw, Search, ShieldCheck, Star, TrendingUp, TriangleAlert, X } from 'lucide-react'
-import { MarketComparison } from './MarketComparison'
 import { assessMarketLiquidity } from './marketDisplay'
 
 type Market = {
@@ -35,6 +34,13 @@ type OfficialVolume = {supported: boolean; source: string; sample_count: number;
 type Seasonality = {timezone: string; lookback_days: number; sample_count: number; observed_days: number; first_sample_at: number | null; last_sample_at: number | null; source: 'poe.ninja' | 'poe2scout'; cells: SeasonalityCell[]; best_slot: SeasonalityCell | null; official_volume: OfficialVolume}
 type MarketSummary = {summary: string; generated_by: 'ai' | 'statistics'; confidence: string; model?: string}
 const weekdays = ['월', '화', '수', '목', '금', '토', '일']
+const exchangeCategories = ['Currency', 'Essences', 'Ritual', 'Runes', 'SoulCores', 'Abyss', 'Fragments', 'Breach', 'Delirium', 'Idols', 'Expedition', 'UncutGems', 'LineageSupportGems', 'Verisium']
+const currencyGroups = [
+  {label: '화폐', ids: ['transmute', 'greater-orb-of-transmutation', 'perfect-orb-of-transmutation', 'aug', 'greater-orb-of-augmentation', 'perfect-orb-of-augmentation', 'regal', 'greater-regal-orb', 'perfect-regal-orb', 'exalted', 'greater-exalted-orb', 'perfect-exalted-orb', 'chaos', 'greater-chaos-orb', 'perfect-chaos-orb', 'vaal', 'alch', 'divine', 'chance', 'annul', 'fracturing-orb', 'mirror', 'hinekoras-lock', 'crystallised-corruption']},
+  {label: '쥬얼러의 화폐', ids: ['lesser-jewellers-orb', 'greater-jewellers-orb', 'perfect-jewellers-orb']},
+  {label: '화폐 파편', ids: ['chance-shard', 'artificers-shard']},
+  {label: '퀄리티 화폐', ids: ['whetstone', 'scrap', 'gcp', 'bauble']},
+]
 const intervals = ['1m', '5m', '1h', '1d'] as const
 const rewardContents = [
   {id: 'ritual', name: '의식', hint: '징조 · 우상', categories: ['Ritual', 'Idols']},
@@ -64,6 +70,16 @@ function RewardPrice({value}: {value: number}) {
   const decimalAt = formatted.indexOf('.')
   if (decimalAt < 0 || formatted.startsWith('<')) return <span className="reward-price-whole">{formatted}</span>
   return <><span className="reward-price-whole">{formatted.slice(0, decimalAt)}</span><span className="reward-price-fraction">{formatted.slice(decimalAt)}</span></>
+}
+function MainChartPrice({value}: {value: string}) {
+  if (value.startsWith('<') || value === '—') return <span className="main-price-whole">{value}</span>
+  const numeric = Number(value.replaceAll(',', ''))
+  if (!Number.isFinite(numeric)) return <span className="main-price-whole">{value}</span>
+  const digits = numeric >= 100 ? 1 : numeric >= 10 ? 2 : 3
+  const formatted = numeric.toLocaleString('ko-KR', {minimumFractionDigits: digits, maximumFractionDigits: digits})
+  const decimalAt = formatted.indexOf('.')
+  if (decimalAt < 0) return <span className="main-price-whole">{formatted}</span>
+  return <><span className="main-price-whole">{formatted.slice(0, decimalAt)}</span><span className="main-price-fraction">{formatted.slice(decimalAt)}</span></>
 }
 const clock = (seconds: number) => new Date(seconds * 1000).toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
 const timeAgo = (seconds: number) => {
@@ -206,6 +222,9 @@ export default function App() {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('all')
   const [categoryOpen, setCategoryOpen] = useState(false)
+  const [exchangeCategory, setExchangeCategory] = useState('Currency')
+  const [exchangeQuery, setExchangeQuery] = useState('')
+  const [exchangeSort, setExchangeSort] = useState<'game' | 'price'>('game')
   const [exchangeOpen, setExchangeOpen] = useState(false)
   const [rewardsOpen, setRewardsOpen] = useState(false)
   const [rewardContent, setRewardContent] = useState<RewardContentId>('ritual')
@@ -230,6 +249,7 @@ export default function App() {
   const [chartKind, setChartKind] = useState<'observed_snapshots' | 'live_listings'>('observed_snapshots')
   const [, setSelectedSourceStatus] = useState<SourceStatus | null>(null)
   const [updated, setUpdated] = useState(0)
+  const exchangeSearchRef = useRef<HTMLInputElement>(null)
   const [refreshing, setRefreshing] = useState(false)
   const exaltedReference = selectedId === 'exchange:Currency:exalted'
   const divineReference = selectedId === 'exchange:Currency:divine'
@@ -243,6 +263,26 @@ export default function App() {
     if (!selectedId) return
     setRecentIds(items => [selectedId, ...items.filter(id => id !== selectedId)].slice(0, 12))
   }, [selectedId])
+  useEffect(() => {
+    if (!exchangeOpen) return
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setExchangeOpen(false) }
+    const focusSearch = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        exchangeSearchRef.current?.focus()
+      }
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    document.addEventListener('keydown', focusSearch)
+    window.setTimeout(() => exchangeSearchRef.current?.focus(), 0)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', closeOnEscape)
+      document.removeEventListener('keydown', focusSearch)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [exchangeOpen])
   useEffect(() => {
     fetch('/api/leagues').then(r => {if (!r.ok) throw Error('리그 목록을 불러오지 못했습니다.'); return r.json()})
       .then((items: League[]) => {setLeagues(items); setLeague(items[0]?.id || '')})
@@ -438,6 +478,25 @@ export default function App() {
   const selectedCadence = Math.max(1, Math.round((data?.selected_poll_seconds || 60) / 60))
   const marketCadence = Math.max(1, Math.round((data?.upstream_poll_seconds || 900) / 60))
   const currencyMarkets = data?.markets.filter(m => ['exchange:Currency:divine', 'exchange:Currency:exalted', 'exchange:Currency:chaos'].includes(m.id)) || []
+  const exchangeQuote = (market: Market) => {
+    if (market.id === 'exchange:Currency:exalted') {
+      return {value: chaosMarket?.price_divine ? price(market.price_divine / chaosMarket.price_divine) : '—', unit: '카오스'}
+    }
+    return {value: exaltedMarket?.price_divine ? price(market.price_divine / exaltedMarket.price_divine) : '—', unit: '엑잘'}
+  }
+  const exchangeMarkets = (data?.markets || []).filter(m =>
+    exchangeCategories.includes(m.category) &&
+    (exchangeCategory === 'all' || m.category === exchangeCategory) &&
+    (!exchangeQuery.trim() || `${m.name} ${m.base_type || ''}`.toLocaleLowerCase('ko-KR').includes(exchangeQuery.trim().toLocaleLowerCase('ko-KR')))
+  )
+  const exchangePrice = (market: Market) => exaltedMarket?.price_divine ? market.price_divine / exaltedMarket.price_divine : market.price_divine
+  const sortExchangeMarkets = (markets: Market[]) => exchangeSort === 'price' ? [...markets].sort((a, b) => exchangePrice(b) - exchangePrice(a)) : markets
+  const groupedExchangeMarkets = exchangeSort === 'game' && exchangeCategory === 'Currency' && !exchangeQuery.trim() ? [
+    ...currencyGroups.map(group => ({label: group.label, markets: group.ids.map(id => exchangeMarkets.find(m => m.id === `exchange:Currency:${id}`)).filter((m): m is Market => !!m)})),
+    {label: '기타 화폐', markets: exchangeMarkets.filter(m => !currencyGroups.some(group => group.ids.includes(m.id.replace('exchange:Currency:', ''))))},
+  ].filter(group => group.markets.length) : exchangeCategory === 'all'
+    ? exchangeCategories.map(key => ({label: data?.categories[key] || key, markets: sortExchangeMarkets(exchangeMarkets.filter(m => m.category === key))})).filter(group => group.markets.length)
+    : [{label: exchangeSort === 'price' ? `${data?.categories[exchangeCategory] || exchangeCategory} · 비싼 순` : data?.categories[exchangeCategory] || exchangeCategory, markets: sortExchangeMarkets(exchangeMarkets)}]
   const heatCells = new Map(seasonalityData?.cells.map(cell => [`${cell.weekday}:${cell.hour}`, cell]) || [])
   const activeRewardContent = rewardContents.find(item => item.id === rewardContent) || rewardContents[0]
   const rewardCategoryOptions = activeRewardContent.categories.map(key => ({key, label: data?.categories[key] || key}))
@@ -473,7 +532,7 @@ export default function App() {
         </div>
         <div className="main-grid">
           <section className="panel chart-panel"><div className="panel-head chart-head"><div className="selected-title">{selected ? <MarketIcon market={selected} size="large"/> : <span className="market-icon large"><Coins/></span>}<div><div className="selected-sub">{selected?.category_label || 'MARKET'} {selected?.base_type ? `· ${selected.base_type}` : ''}</div><h2 className="selected-name-line"><span>{selected?.name || (loading ? '시세를 불러오는 중...' : '아이템을 선택하세요')}</span>{selected && <MarketLiquidityWarning market={selected}/>}</h2></div></div><button className={`favorite-button ${selected && favorites.includes(selected.id) ? 'saved' : ''}`} title="관심 목록" disabled={!selected} onClick={() => selected && toggleFavorite(selected.id)}><Star size={19} fill={selected && favorites.includes(selected.id) ? 'currentColor' : 'none'}/></button></div>
-            <div className="price-line"><strong>{selectedPriceText} <em>{exaltedReference ? (unit === 'divine' ? '신성 / 1 엑잘' : '카오스 / 1 엑잘') : divineReference ? (unit === 'divine' ? '카오스 / 1 신성' : '엑잘 / 1 신성') : unitLabel}</em></strong><span className={`price-change ${changeClass(selected?.trend_percent ?? null)}`}>{changeText(selected?.trend_percent ?? null)} <small>poe.ninja 최근 7일 변동</small></span></div>
+            <div className="price-line"><strong><MainChartPrice value={selectedPriceText}/> <em>{exaltedReference ? (unit === 'divine' ? '신성 / 1 엑잘' : '카오스 / 1 엑잘') : divineReference ? (unit === 'divine' ? '카오스 / 1 신성' : '엑잘 / 1 신성') : unitLabel}</em></strong><span className={`price-change ${changeClass(selected?.trend_percent ?? null)}`}>{changeText(selected?.trend_percent ?? null)} <small>poe.ninja 최근 7일 변동</small></span></div>
             {liveQuote && !chaosReference && <div className="live-source">Trade2 매물 호가 · 중앙값 {price(liveQuote.price_exalted)} 엑잘{liveQuote.count != null ? ` · ${liveQuote.count}개 매물` : ''} · {timeAgo(liveQuote.observed_at)}</div>}<div className="chart-toolbar"><div className="intervals">{intervals.map(item => <button key={item} className={interval === item ? 'active' : ''} onClick={() => setInterval(item)}>{labels[item]}</button>)}</div><div className="units">{exaltedReference ? <><button className={unit === 'exalted' ? 'active' : ''} onClick={() => setUnit('exalted')}>카오스</button><button className={unit === 'divine' ? 'active' : ''} onClick={() => setUnit('divine')}>신성</button></> : divineReference ? <><button className={unit === 'exalted' ? 'active' : ''} onClick={() => setUnit('exalted')}>엑잘</button><button className={unit === 'divine' ? 'active' : ''} onClick={() => setUnit('divine')}>카오스</button></> : <><button className={unit === 'exalted' ? 'active' : ''} onClick={() => setUnit('exalted')}>엑잘</button><button className={unit === 'divine' ? 'active' : ''} onClick={() => setUnit('divine')}>신성</button></>}</div></div>
             <PriceChart candles={candlesKey === chartKey ? candles : []} loading={chartLoading || candlesKey !== chartKey} interval={interval} seriesKey={chartKey}/>
             <div className="chart-caption"><span><span className="caption-dot"/> {interval === '1m' ? '1분 간격 가격 관측값' : `${labels[interval]} 구간의 관측값 OHLC`}</span><span>{chartKind === 'live_listings' ? `Trade2 매물 호가 관측 · ${Math.round((data?.trade2_live_seconds || 30))}초 확인 · 체결가 아님` : `poe.ninja 시세 관측 · 선택 ${selectedCadence}분 확인 · 체결가 아님`}</span></div>
@@ -512,22 +571,12 @@ export default function App() {
             <div className="market-panel-foot"><span>종목 선택 시 차트가 변경됩니다</span><span>시세 {marketCadence}분 확인</span></div>
           </section>
         </div>
-        {rewardsOpen && <aside className="reward-drawer" role="dialog" aria-modal="false" aria-label="콘텐츠별 주요 보상"><div className="reward-head"><div><div className="eyebrow small">CONTENT REWARDS</div><h2>콘텐츠별 주요 보상</h2><p>게임 중 가치 있는 드롭을 빠르게 확인하세요.</p></div><button onClick={() => setRewardsOpen(false)} aria-label="콘텐츠 보상 닫기"><X size={20}/></button></div><div className="reward-tabs">{rewardContents.map(content => <button key={content.id} className={rewardContent === content.id ? 'active' : ''} onClick={() => {setRewardContent(content.id); setRewardCategory('all'); setRewardCategoryOpen(false)}}><strong>{content.name}</strong><small>{content.hint}</small></button>)}</div><div className="reward-summary"><span>{activeRewardContent.name}</span><div className="reward-summary-actions"><div className={`market-category-menu reward-category-menu ${rewardCategoryOpen ? 'open' : ''}`}><button className="market-category-trigger" aria-haspopup="listbox" aria-expanded={rewardCategoryOpen} onClick={() => setRewardCategoryOpen(open => !open)}><span>{rewardCategoryLabel}</span><ChevronDown size={15}/></button>{rewardCategoryOpen && <div className="market-category-options" role="listbox" aria-label="보상 아이템 분류"><button role="option" aria-selected={rewardCategory === 'all'} className={rewardCategory === 'all' ? 'selected' : ''} onClick={() => {setRewardCategory('all'); setRewardCategoryOpen(false)}}>전체 분류</button>{rewardCategoryOptions.map(item => <button key={item.key} role="option" aria-selected={rewardCategory === item.key} className={rewardCategory === item.key ? 'selected' : ''} onClick={() => {setRewardCategory(item.key); setRewardCategoryOpen(false)}}>{item.label}</button>)}</div>}</div><strong>비싼 순 · {rewardMarkets.length}개</strong></div><small>현재 시세 기준, 1개당 엑잘 환산</small></div><div className="reward-list">{rewardMarkets.map((market, index) => { const value = rewardPrice(market); const tier = rewardTier(value); return <button key={market.id} className="reward-item" title={market.name + ' · ' + price(value) + ' 엑잘'} onClick={() => setSelectedId(market.id)}><span className="reward-rank">{index + 1}</span><MarketIcon market={market}/><span className="reward-name"><span className="reward-name-line"><strong>{market.name}</strong><MarketLiquidityWarning market={market}/></span><small>{market.category_label}</small></span>{tier && <em className={`reward-tier tier-${tier === '초고가' ? 'top' : tier === '고가' ? 'high' : 'main'}`}>{tier}</em>}<span className="reward-value"><strong><RewardPrice value={value}/></strong><small>엑잘</small></span></button>})}{!rewardMarkets.length && <div className="reward-empty">시세 데이터를 불러오는 중입니다.</div>}</div><div className="reward-foot"><span>poe.ninja 관측 시세 · 체결가와 다를 수 있음</span><button onClick={() => {setRewardsOpen(false); if (rewardMarkets[0]) setSelectedId(rewardMarkets[0].id)}}>1위 차트 보기</button></div></aside>}        {exchangeOpen && <MarketComparison
-          league={league}
-          markets={data?.markets || []}
-          categories={data?.categories || {}}
-          referenceRates={{exalted_per_divine: data?.exalted_per_divine, chaos_price_divine: chaosMarket?.price_divine}}
-          selectedId={selectedId}
-          favorites={favorites}
-          lastFetched={lastFetched}
-          nextRefresh={nextMarketRefresh}
-          refreshMinutes={marketCadence}
-          icon={market => <MarketIcon market={market}/>}
-          onSelect={setSelectedId}
-          onToggleFavorite={toggleFavorite}
-          onAnalyze={id => {setSelectedId(id); setExchangeOpen(false); window.requestAnimationFrame(() => document.querySelector('.chart-panel')?.scrollIntoView({behavior: 'smooth', block: 'start'}))}}
-          onClose={() => setExchangeOpen(false)}
-        />}
+        {rewardsOpen && <aside className="reward-drawer" role="dialog" aria-modal="false" aria-label="콘텐츠별 주요 보상"><div className="reward-head"><div><div className="eyebrow small">CONTENT REWARDS</div><h2>콘텐츠별 주요 보상</h2><p>게임 중 가치 있는 드롭을 빠르게 확인하세요.</p></div><button onClick={() => setRewardsOpen(false)} aria-label="콘텐츠 보상 닫기"><X size={20}/></button></div><div className="reward-tabs">{rewardContents.map(content => <button key={content.id} className={rewardContent === content.id ? 'active' : ''} onClick={() => {setRewardContent(content.id); setRewardCategory('all'); setRewardCategoryOpen(false)}}><strong>{content.name}</strong><small>{content.hint}</small></button>)}</div><div className="reward-summary"><span>{activeRewardContent.name}</span><div className="reward-summary-actions"><div className={`market-category-menu reward-category-menu ${rewardCategoryOpen ? 'open' : ''}`}><button className="market-category-trigger" aria-haspopup="listbox" aria-expanded={rewardCategoryOpen} onClick={() => setRewardCategoryOpen(open => !open)}><span>{rewardCategoryLabel}</span><ChevronDown size={15}/></button>{rewardCategoryOpen && <div className="market-category-options" role="listbox" aria-label="보상 아이템 분류"><button role="option" aria-selected={rewardCategory === 'all'} className={rewardCategory === 'all' ? 'selected' : ''} onClick={() => {setRewardCategory('all'); setRewardCategoryOpen(false)}}>전체 분류</button>{rewardCategoryOptions.map(item => <button key={item.key} role="option" aria-selected={rewardCategory === item.key} className={rewardCategory === item.key ? 'selected' : ''} onClick={() => {setRewardCategory(item.key); setRewardCategoryOpen(false)}}>{item.label}</button>)}</div>}</div><strong>비싼 순 · {rewardMarkets.length}개</strong></div><small>현재 시세 기준, 1개당 엑잘 환산</small></div><div className="reward-list">{rewardMarkets.map((market, index) => { const value = rewardPrice(market); const tier = rewardTier(value); return <button key={market.id} className="reward-item" title={market.name + ' · ' + price(value) + ' 엑잘'} onClick={() => setSelectedId(market.id)}><span className="reward-rank">{index + 1}</span><MarketIcon market={market}/><span className="reward-name"><span className="reward-name-line"><strong>{market.name}</strong><MarketLiquidityWarning market={market}/></span><small>{market.category_label}</small></span>{tier && <em className={`reward-tier tier-${tier === '초고가' ? 'top' : tier === '고가' ? 'high' : 'main'}`}>{tier}</em>}<span className="reward-value"><strong><RewardPrice value={value}/></strong><small>엑잘</small></span></button>})}{!rewardMarkets.length && <div className="reward-empty">시세 데이터를 불러오는 중입니다.</div>}</div><div className="reward-foot"><span>poe.ninja 관측 시세 · 체결가와 다를 수 있음</span><button onClick={() => {setRewardsOpen(false); if (rewardMarkets[0]) setSelectedId(rewardMarkets[0].id)}}>1위 차트 보기</button></div></aside>}
+        {exchangeOpen && <div className="exchange-overlay" onMouseDown={event => {if (event.target === event.currentTarget) setExchangeOpen(false)}}><section className="exchange-panel" role="dialog" aria-modal="true" aria-label="게임 거래소 형태의 아이템 시세표">
+          <div className="exchange-heading"><div><div className="eyebrow small">GAME EXCHANGE</div><h2>아이템 거래소 시세표</h2><p>게임의 아이템 선택 화면처럼 분류별로 살펴보고, 1개당 엑잘 환산 시세를 확인하세요.</p></div><div className="exchange-tools"><div className="exchange-sort" role="group" aria-label="아이템 정렬"><button aria-pressed={exchangeSort === 'game'} className={exchangeSort === 'game' ? 'active' : ''} onClick={() => setExchangeSort('game')}>기본</button><button aria-pressed={exchangeSort === 'price'} className={exchangeSort === 'price' ? 'active' : ''} onClick={() => setExchangeSort('price')}>비싼 순</button></div><label className="exchange-search"><Search size={16}/><input ref={exchangeSearchRef} value={exchangeQuery} onChange={e => setExchangeQuery(e.target.value)} placeholder="아이템 이름 검색" aria-label="거래소 아이템 검색"/><kbd>Ctrl K</kbd>{exchangeQuery && <button onClick={() => setExchangeQuery('')} title="검색어 지우기"><X size={15}/></button>}</label><span className="exchange-result-count" aria-live="polite">{exchangeMarkets.length}개</span></div><button className="exchange-close" onClick={() => setExchangeOpen(false)} aria-label="거래소 시세표 닫기"><X size={20}/></button></div>
+          <div className="exchange-body"><nav className="exchange-nav" aria-label="거래소 아이템 분류"><div className="exchange-nav-label">아이템 분류</div><button className={exchangeCategory === 'all' ? 'active' : ''} onClick={() => {setExchangeCategory('all'); setExchangeQuery('')}}><span>모두</span><small>{data?.markets.filter(m => exchangeCategories.includes(m.category)).length || 0}</small></button>{exchangeCategories.filter(key => data?.categories[key]).map(key => <button key={key} className={exchangeCategory === key ? 'active' : ''} onClick={() => {setExchangeCategory(key); setExchangeQuery('')}}><span>{data?.categories[key]}</span><small>{data?.markets.filter(m => m.category === key).length}</small></button>)}</nav><div className="exchange-items">{groupedExchangeMarkets.map(group => <div className="exchange-group" key={group.label}><h3><span>{group.label}</span><small>{group.markets.length}개</small></h3><div className="exchange-blocks">{Array.from({length: Math.ceil(group.markets.length / 9)}, (_, block) => <div className="exchange-grid" key={`${group.label}:${block}`}>{group.markets.slice(block * 9, block * 9 + 9).map(m => { const quote = exchangeQuote(m); return <button key={m.id} className={`exchange-item ${selectedId === m.id ? 'selected' : ''}`} onClick={() => setSelectedId(m.id)} title={`${m.name} · ${quote.value} ${quote.unit}`}><MarketIcon market={m}/><span className="exchange-item-name"><span>{m.name}</span><MarketLiquidityWarning market={m}/></span><span className="exchange-item-price">{quote.value} <small>{quote.unit}</small></span></button>})}</div>)}</div></div>)}{!exchangeMarkets.length && <div className="exchange-no-results">표시할 아이템이 없습니다.</div>}</div></div>
+          <div className="exchange-foot"><span>{selected ? <><strong>{selected.name}</strong> 선택 · {exchangeQuote(selected).value} {exchangeQuote(selected).unit}</> : '아이템을 선택하세요'}<small>poe.ninja 관측 시세 · 실제 체결 가격과 다를 수 있습니다</small></span><button disabled={!selected} onClick={() => setExchangeOpen(false)}>선택 종목 차트 보기</button></div>
+        </section></div>}
         <section id="buying-window" className="panel seasonality-panel" aria-label="요일별 매수 시간 분석">
           <div className="seasonality-heading"><div><div className="eyebrow small">BUYING WINDOW</div><h2>요일·시간대 가격 패턴</h2><p>{selected?.name || '아이템'}의 가격과 공식 교환 거래량을 한국 시간 기준으로 봅니다.</p></div><div className="seasonality-controls"><div className="seasonality-period" aria-label="분석 자료"><button className={!showVolume ? 'active' : ''} onClick={() => setHeatMetric('price')}>가격 편차</button>{seasonalityData?.official_volume.supported && <button className={showVolume ? 'active' : ''} onClick={() => setHeatMetric('volume')}>공식 거래량</button>}</div><div className="seasonality-period" aria-label="분석 기간">{([28, 56, 84] as const).map(days => <button key={days} className={historyDays === days ? 'active' : ''} onClick={() => setHistoryDays(days)}>{days / 7}주</button>)}</div></div></div>
           <div className="seasonality-summary"><div><span>{seasonalityData?.source === 'poe2scout' ? 'POE2Scout 과거 가격 기록' : '저장된 전체 시장 관측'}</span><strong>{seasonalityData ? `${nfmt(seasonalityData.sample_count)}회 · ${seasonalityData.observed_days}일` : seasonalityLoading ? '불러오는 중' : '—'}</strong></div><div><span>상대적으로 저렴했던 시간</span><strong>{seasonalityData?.best_slot ? `${weekdays[seasonalityData.best_slot.weekday]}요일 ${String(seasonalityData.best_slot.hour).padStart(2, '0')}시 · ${changeText(seasonalityData.best_slot.relative_percent)}` : '분석을 위한 기록 누적 중'}</strong></div><div><span>{seasonalityData?.official_volume.supported ? 'GGG 공식 교환량 · 선택 기간' : '분석 조건'}</span><strong>{seasonalityData?.official_volume.supported ? `${nfmt(seasonalityData.official_volume.total_volume_item)}개 · ${seasonalityData.official_volume.sample_count}시간` : '3주 이상 · 시간대별 3일 이상'}</strong></div></div>

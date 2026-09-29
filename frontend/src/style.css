@@ -295,3 +295,6 @@ html{scroll-behavior:smooth}
   .reward-head .eyebrow{font-size:9px}.reward-head h2{font-size:19px}.reward-head p{max-width:280px}
   .reward-summary strong{font-size:10px}.reward-list{padding-inline:8px}.reward-item{grid-template-columns:20px 40px minmax(0,1fr) auto;grid-template-rows:auto auto;padding-inline:9px}.reward-rank,.reward-item .market-icon{grid-row:1/3}.reward-name{grid-column:3;grid-row:1}.reward-tier{grid-column:3;grid-row:2;justify-self:start}.reward-value{grid-column:4;grid-row:1/3;align-self:center;min-width:82px}.reward-value strong{font-size:15px}
 }
+
+.main-price-fraction{color:#8b9aad;font-weight:700}
+
