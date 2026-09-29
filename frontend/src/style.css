@@ -68,6 +68,7 @@
 /* Local weekday and hour analysis */
 .seasonality-panel{padding:23px 26px 18px;min-width:0}
 .seasonality-heading{display:flex;justify-content:space-between;align-items:center;gap:20px}
+.seasonality-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .seasonality-heading h2{margin-top:5px;font-size:17px}
 .seasonality-heading p{margin:7px 0 0;color:#97a9bd;font-size:10px}
 .seasonality-period{display:flex;gap:3px;padding:3px;border:1px solid #e6edf5;border-radius:7px;background:#f7f9fc;flex:none}
@@ -90,4 +91,4 @@
 .seasonality-note i{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 3px 0 9px}
 .seasonality-note i:first-child{margin-left:0}
 .heatmap-low{background:#7da6e4}.heatmap-high{background:#e98b9d}
-@media(max-width:760px){.seasonality-panel{padding:19px 14px}.seasonality-heading{align-items:flex-start;flex-direction:column;gap:10px}.seasonality-summary{grid-template-columns:1fr;gap:6px;margin:15px 0}.seasonality-summary>div{min-height:0}.seasonality-note{line-height:1.6}}
+@media(max-width:760px){.seasonality-panel{padding:19px 14px}.seasonality-heading{align-items:flex-start;flex-direction:column;gap:10px}.seasonality-controls{justify-content:flex-start}.seasonality-summary{grid-template-columns:1fr;gap:6px;margin:15px 0}.seasonality-summary>div{min-height:0}.seasonality-note{line-height:1.6}}

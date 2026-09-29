@@ -49,6 +49,14 @@ TRADE2_BASE = "https://www.pathofexile.com"
 TRADE2_MAJOR_IDS = {"exalted", "chaos", "divine", "annul"}
 HISTORY_SNAPSHOT_SECONDS = max(300, int(os.getenv("POE_HISTORY_SNAPSHOT_SECONDS", "900")))
 TRACKED_ACTIVE_SECONDS = max(3600, int(os.getenv("POE_TRACKED_ACTIVE_SECONDS", "86400")))
+OFFICIAL_EXCHANGE_BASE = "https://web.poecdn.com/api/currency-exchange/poe2"
+OFFICIAL_BACKFILL_DAYS = max(1, min(84, int(os.getenv("POE_OFFICIAL_BACKFILL_DAYS", "28"))))
+OFFICIAL_EXALTED = "Metadata/Items/Currency/CurrencyAddModToRare"
+OFFICIAL_ITEM_IDS = {
+    "exchange:Currency:divine": "Metadata/Items/Currency/CurrencyModValues",
+    "exchange:Currency:chaos": "Metadata/Items/Currency/CurrencyRerollRare",
+    "exchange:Currency:annul": "Metadata/Items/Currency/CurrencyRemoveMod",
+}
 SEOUL = ZoneInfo("Asia/Seoul")
 MAX_HTTP_RETRIES = 3
 LOCALIZATION_VERSION = "v2026.09.17.2"
@@ -171,6 +179,16 @@ def init_db():
           market_key INTEGER NOT NULL, source TEXT NOT NULL, sample_at INTEGER NOT NULL,
           price_exalted REAL NOT NULL, fetched_at INTEGER NOT NULL,
           PRIMARY KEY (market_key, source, sample_at)
+        ) WITHOUT ROWID;
+        CREATE TABLE IF NOT EXISTS official_exchange_hours (
+          hour_start INTEGER PRIMARY KEY, fetched_at INTEGER NOT NULL,
+          pair_count INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS official_exchange_volume (
+          league TEXT NOT NULL, market_id TEXT NOT NULL, hour_start INTEGER NOT NULL,
+          volume_item INTEGER NOT NULL, volume_exalted INTEGER NOT NULL,
+          lowest_exalted_ratio REAL, highest_exalted_ratio REAL,
+          PRIMARY KEY (league, market_id, hour_start)
         ) WITHOUT ROWID;
         CREATE TABLE IF NOT EXISTS live_observations (
           league TEXT NOT NULL, market_id TEXT NOT NULL, minute INTEGER NOT NULL,
@@ -397,6 +415,88 @@ def sample_market_snapshots(league: str, now: int | None = None):
             (bucket_start, league, now - MARKET_POLL_SECONDS * 2))
 
 
+def save_official_exchange_hour(hour_start: int, payload: dict):
+    """Keep GGG completed-hour exchange volumes separate from price estimates."""
+    if payload.get("next_change_id") != hour_start + 3600 or not isinstance(payload.get("markets"), list):
+        raise ValueError("Official exchange response does not match the requested completed hour")
+    by_item = {value: key for key, value in OFFICIAL_ITEM_IDS.items()}
+    rows = []
+    for pair in payload["markets"]:
+        if not isinstance(pair, dict):
+            continue
+        ids = pair.get("market_pair") or []
+        if len(ids) != 2 or OFFICIAL_EXALTED not in ids:
+            continue
+        item_id = ids[0] if ids[1] == OFFICIAL_EXALTED else ids[1]
+        market_id = by_item.get(item_id)
+        if not market_id or not isinstance(pair.get("league"), str):
+            continue
+        volumes = pair.get("volume_traded") or {}
+        try:
+            volume_item = int(volumes[item_id])
+            volume_exalted = int(volumes[OFFICIAL_EXALTED])
+            if volume_item < 0 or volume_exalted < 0:
+                continue
+        except (KeyError, TypeError, ValueError):
+            continue
+        ratios = []
+        for field in ("lowest_ratio", "highest_ratio"):
+            ratio = pair.get(field) or {}
+            try:
+                item_amount = float(ratio[item_id])
+                exalted_amount = float(ratio[OFFICIAL_EXALTED])
+                if item_amount > 0 and exalted_amount > 0:
+                    ratios.append(exalted_amount / item_amount)
+            except (KeyError, TypeError, ValueError, ZeroDivisionError):
+                continue
+        rows.append((pair["league"], market_id, hour_start, volume_item, volume_exalted,
+                     min(ratios) if ratios else None, max(ratios) if ratios else None))
+    with connect() as db:
+        db.executemany("""INSERT INTO official_exchange_volume
+            (league,market_id,hour_start,volume_item,volume_exalted,
+             lowest_exalted_ratio,highest_exalted_ratio) VALUES (?,?,?,?,?,?,?)
+            ON CONFLICT(league,market_id,hour_start) DO UPDATE SET
+              volume_item=excluded.volume_item,volume_exalted=excluded.volume_exalted,
+              lowest_exalted_ratio=excluded.lowest_exalted_ratio,
+              highest_exalted_ratio=excluded.highest_exalted_ratio""", rows)
+        db.execute("""INSERT OR REPLACE INTO official_exchange_hours
+            (hour_start,fetched_at,pair_count) VALUES (?,?,?)""",
+            (hour_start, int(time.time()), len(payload["markets"])))
+    return len(rows)
+
+
+def official_missing_hours(now: int | None = None, count: int = 2):
+    now = int(time.time()) if now is None else now
+    latest = now // 3600 * 3600 - 3600
+    earliest = latest - OFFICIAL_BACKFILL_DAYS * 86400
+    with connect() as db:
+        fetched = {row[0] for row in db.execute(
+            "SELECT hour_start FROM official_exchange_hours WHERE hour_start BETWEEN ? AND ?",
+            (earliest, latest))}
+    return [hour for hour in range(latest, earliest - 1, -3600) if hour not in fetched][:count]
+
+
+def official_volume_summary(league: str, market_id: str, since: int):
+    supported = market_id in OFFICIAL_ITEM_IDS
+    if not supported:
+        return {"supported": False, "source": "GGG Currency Exchange", "sample_count": 0,
+                "first_hour": None, "last_hour": None, "total_volume_item": 0, "cells": []}
+    with connect() as db:
+        rows = db.execute("""SELECT hour_start,volume_item FROM official_exchange_volume
+            WHERE league=? AND market_id=? AND hour_start>=? ORDER BY hour_start""",
+            (league, market_id, since)).fetchall()
+    by_slot: dict[tuple[int, int], list[int]] = {}
+    for row in rows:
+        local = datetime.fromtimestamp(row["hour_start"], SEOUL)
+        by_slot.setdefault((local.weekday(), local.hour), []).append(row["volume_item"])
+    cells = [{"weekday": weekday, "hour": hour, "median_volume_item": round(statistics.median(values)),
+              "hours": len(values)} for (weekday, hour), values in sorted(by_slot.items())]
+    return {"supported": True, "source": "GGG Currency Exchange", "sample_count": len(rows),
+            "first_hour": rows[0]["hour_start"] if rows else None,
+            "last_hour": rows[-1]["hour_start"] if rows else None,
+            "total_volume_item": sum(row["volume_item"] for row in rows), "cells": cells}
+
+
 def seasonality(league: str, market_id: str, days: int, unit: str):
     """Compare each Seoul weekday/hour to that day's median price."""
     column = "price_exalted" if unit == "exalted" else "price_divine"
@@ -442,6 +542,7 @@ def seasonality(league: str, market_id: str, days: int, unit: str):
     best = min(eligible, key=lambda item: item["relative_percent"]) if eligible and span_days >= 21 else None
     return {"league": league, "market_id": market_id, "unit": unit,
             "source": source,
+            "official_volume": official_volume_summary(league, market_id, since),
             "timezone": "Asia/Seoul", "lookback_days": days,
             "first_sample_at": rows[0]["bucket_start"] if rows else None,
             "last_sample_at": rows[-1]["bucket_start"] if rows else None,
@@ -746,6 +847,29 @@ async def refresh_loop():
         await asyncio.sleep(60)
 
 
+async def fetch_official_exchange_hour(hour_start: int):
+    response = await collector._get_with_backoff(f"{OFFICIAL_EXCHANGE_BASE}/{hour_start}")
+    if response.status_code != 200:
+        raise httpx.HTTPError(f"GGG exchange hour {hour_start}: HTTP {response.status_code}")
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise ValueError("GGG exchange response is not an object")
+    return await asyncio.to_thread(save_official_exchange_hour, hour_start, payload)
+
+
+async def official_exchange_loop():
+    while True:
+        for hour_start in await asyncio.to_thread(official_missing_hours):
+            try:
+                count = await fetch_official_exchange_hour(hour_start)
+                LOGGER.info("Stored GGG exchange hour %s (%s mapped pairs)", hour_start, count)
+            except (httpx.HTTPError, ValueError):
+                LOGGER.exception("Official exchange hour %s will be retried", hour_start)
+                break
+            await asyncio.sleep(2)
+        await asyncio.sleep(60)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -754,7 +878,8 @@ async def lifespan(app: FastAPI):
         existing_leagues = [row[0] for row in db.execute("SELECT DISTINCT league FROM markets")]
     for league in existing_leagues:
         await asyncio.to_thread(sample_market_snapshots, league)
-    tasks = [asyncio.create_task(sample_loop()), asyncio.create_task(refresh_loop())]
+    tasks = [asyncio.create_task(sample_loop()), asyncio.create_task(refresh_loop()),
+             asyncio.create_task(official_exchange_loop())]
     yield
     for task in tasks:
         task.cancel()
