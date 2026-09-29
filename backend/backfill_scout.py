@@ -51,8 +51,11 @@ def import_history(league: str, limit: int = 1000, pause: float = 1.0):
                 valid = []
                 for log in logs:
                     try:
-                        sample_at = int(datetime.fromisoformat(
-                            log["Time"].replace("Z", "+00:00")).timestamp())
+                        # Scout emits seven fractional digits; Python 3.10's
+                        # ISO parser accepts at most six on the Ubuntu host.
+                        sample_at = int(datetime.strptime(
+                            log["Time"].split(".", 1)[0].rstrip("Z"),
+                            "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc).timestamp())
                         price = float(log["Price"])
                         if not (0 < price < 1_000_000 and 0 < sample_at <= fetched_at + 3600):
                             raise ValueError("price or timestamp outside expected range")
