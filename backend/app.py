@@ -402,7 +402,8 @@ def seasonality(league: str, market_id: str, days: int, unit: str):
             WHERE k.league=? AND k.market_id=? AND s.bucket_start>=? AND s.{column}>0
             ORDER BY bucket_start""", (league, market_id, since)).fetchall()
         source = "poe.ninja"
-        if unit == "exalted" and len(rows) < 100 and market_id.startswith("exchange:Currency:"):
+        own_span_days = ((rows[-1]["bucket_start"] - rows[0]["bucket_start"]) / 86400) if len(rows) > 1 else 0
+        if unit == "exalted" and (len(rows) < 100 or own_span_days < 21) and market_id.startswith("exchange:Currency:"):
             historical = db.execute("""SELECT h.sample_at AS bucket_start,
                 h.price_exalted AS price FROM external_price_history h
                 JOIN market_keys k ON k.id=h.market_key
