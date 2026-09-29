@@ -52,13 +52,12 @@ cd ~/POE2-Exchange/backend
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 chmod +x ../deploy/run_collector.sh
-mkdir -p ../runtime
-(crontab -l; echo '* * * * * /home/solty/POE2-Exchange/deploy/run_collector.sh >> /home/solty/POE2-Exchange/runtime/collector.log 2>&1 # poe2-market') | crontab -
-../deploy/run_collector.sh
+chmod +x ../deploy/install_user_cron.sh
+../deploy/install_user_cron.sh
 curl http://127.0.0.1:18080/api/health
 ```
 
-위 `run_collector.sh` 명령은 수집기가 실행되는 동안 계속 점유합니다. 별도 셸에서 상태를 확인하세요. 코드 갱신은 `git pull`과 의존성 설치 후 수집기 프로세스를 재시작합니다. 과거 가격은 `cd backend && .venv/bin/python backfill_scout.py --league 'Forbidden Rites'`로 별도 출처 테이블에 가져옵니다. POE2Scout 응답은 체결 건별 로그가 아닌 과거 가격 관측값이며, 데이터가 충분한 화폐에 한해 요일·시간대 분석에 사용합니다.
+cron 등록 후 최대 1분 이내에 수집기가 시작됩니다. 코드 갱신은 `git pull`과 의존성 설치 후 수집기 프로세스를 재시작합니다. 과거 가격은 `cd backend && .venv/bin/python backfill_scout.py --league 'Forbidden Rites'`로 별도 출처 테이블에 가져옵니다. `backend/verify_data.py`는 누적 건수와 시각을 읽기 전용으로 확인합니다. POE2Scout 응답은 체결 건별 로그가 아닌 과거 가격 관측값이며, 데이터가 충분한 화폐에 한해 요일·시간대 분석에 사용합니다.
 
 로컬 화면을 우분투 데이터에 연결하려면 SSH 터널을 연 뒤 프런트엔드를 다시 실행합니다. 서버 주소와 키 경로는 본인 환경에 맞게 바꿉니다.
 
