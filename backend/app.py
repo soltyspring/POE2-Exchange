@@ -316,10 +316,9 @@ def normalize(category: str, payload: dict, scout_items: dict | None = None):
     if category in EXCHANGE_TYPES:
         ordered_items = [item for item in core.get("items", []) if "id" in item]
         items = {item["id"]: item for item in ordered_items}
-        item_order = {item["id"]: index for index, item in enumerate(ordered_items)}
         scout_items = scout_items or {}
         rows = []
-        for line in payload.get("lines", []):
+        for line_order, line in enumerate(payload.get("lines", [])):
             price = finite_positive(line.get("primaryValue"))
             if price is None:
                 continue
@@ -330,7 +329,7 @@ def normalize(category: str, payload: dict, scout_items: dict | None = None):
                          normalized_icon(item.get("image") or scout.get("IconUrl")),
                          None, price, line.get("volumePrimaryValue"), None,
                          (line.get("sparkline") or {}).get("totalChange"), "exchange", now,
-                         item_order.get(line["id"], len(item_order))))
+                         line_order))
         if category == "Currency":
             primary = core.get("primary")
             item = items.get(primary, {})
@@ -338,7 +337,7 @@ def normalize(category: str, payload: dict, scout_items: dict | None = None):
                 rows.append((f"exchange:Currency:{primary}", category, CATEGORIES[category],
                              korean_name(item.get("name") or primary), normalized_icon(item.get("image")),
                              None, 1.0, None, None, 0.0, "reference", now,
-                             item_order.get(primary, len(item_order))))
+                             len(rows)))
         return rows
     rows = []
     for line in payload.get("lines", []):
