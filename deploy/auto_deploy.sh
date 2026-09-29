@@ -7,7 +7,7 @@ node_bin="${POE_NODE_BIN:-$HOME/.nvm/versions/node/v22.23.2/bin}"
 branch="${POE_DEPLOY_BRANCH:-main}"
 
 mkdir -p "$runtime"
-exec /usr/bin/flock -n "$runtime/deploy.lock" sh -c '
+exec /usr/bin/flock -n -o "$runtime/deploy.lock" sh -c '
   set -eu
   repo="$1"
   runtime="$2"
