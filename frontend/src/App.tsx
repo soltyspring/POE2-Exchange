@@ -235,7 +235,7 @@ export default function App() {
   const [scout, setScout] = useState<Scout | null>(null)
   const [liveQuote, setLiveQuote] = useState<LiveQuote | null>(null)
   const [chartKind, setChartKind] = useState<'observed_snapshots' | 'live_listings'>('observed_snapshots')
-  const [selectedSourceStatus, setSelectedSourceStatus] = useState<SourceStatus | null>(null)
+  const [, setSelectedSourceStatus] = useState<SourceStatus | null>(null)
   const [updated, setUpdated] = useState(0)
   const exchangeSearchRef = useRef<HTMLInputElement>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -455,7 +455,6 @@ export default function App() {
   const toggleFavorite = (id: string) => setFavorites(items => items.includes(id) ? items.filter(x => x !== id) : [...items, id])
   const lastFetched = Math.max(0, ...(data?.source_status.map(s => s.fetched_at) || []))
   const sourceErrors = data?.source_status.filter(s => s.error) || []
-  const selectedSource = selectedSourceStatus || (selected ? data?.source_status.find(s => s.category === selected.category) : undefined)
   const nextRefreshValues = data?.source_status.filter(s => Number.isFinite(s.next_refresh_at) && s.next_refresh_at > 0).map(s => s.next_refresh_at) || []
   const nextMarketRefresh = nextRefreshValues.length ? Math.min(...nextRefreshValues) : 0
   const selectedCadence = Math.max(1, Math.round((data?.selected_poll_seconds || 60) / 60))
@@ -505,7 +504,6 @@ export default function App() {
             {liveQuote && !chaosReference && <div className="live-source">Trade2 매물 호가 · 중앙값 {price(liveQuote.price_exalted)} 엑잘{liveQuote.count != null ? ` · ${liveQuote.count}개 매물` : ''} · {timeAgo(liveQuote.observed_at)}</div>}<div className="chart-toolbar"><div className="intervals">{intervals.map(item => <button key={item} className={interval === item ? 'active' : ''} onClick={() => setInterval(item)}>{labels[item]}</button>)}</div><div className="units">{chaosReference ? <><button className={unit === 'exalted' ? 'active' : ''} onClick={() => setUnit('exalted')}>카오스</button><button className={unit === 'divine' ? 'active' : ''} onClick={() => setUnit('divine')}>신성</button></> : <><button className={unit === 'exalted' ? 'active' : ''} onClick={() => setUnit('exalted')}>엑잘</button><button className={unit === 'divine' ? 'active' : ''} onClick={() => setUnit('divine')}>신성</button></>}</div></div>
             <PriceChart candles={candlesKey === chartKey ? candles : []} loading={chartLoading || candlesKey !== chartKey} interval={interval} seriesKey={chartKey}/>
             <div className="chart-caption"><span><span className="caption-dot"/> {interval === '1m' ? '1분 간격 가격 관측값' : `${labels[interval]} 구간의 관측값 OHLC`}</span><span>{chartKind === 'live_listings' ? `Trade2 매물 호가 관측 · ${Math.round((data?.trade2_live_seconds || 30))}초 확인 · 체결가 아님` : `poe.ninja 시세 관측 · 선택 ${selectedCadence}분 확인 · 체결가 아님`}</span></div>
-            <div className="market-facts"><div><span>마지막 성공 갱신</span><strong>{selectedSource?.fetched_at ? clock(selectedSource.fetched_at) : selected ? clock(selected.observed_at) : '—'}</strong></div><div><span>다음 자동 확인</span><strong>{selectedSource?.next_refresh_at ? clock(selectedSource.next_refresh_at) : `${selectedCadence}분 주기`}</strong></div><div><span>캐시 상태</span><strong>{selectedSource ? `${selectedSource.cache_state === 'fresh' ? '정상' : selectedSource.cache_state === 'error' ? '오류 · 이전 값' : '갱신 대기'}${selectedSource.conditional_cache ? ' · ETag' : ''}` : '—'}</strong></div><div><span>{selected?.source_kind === 'stash' ? '현재 매물' : '거래 규모'}</span><strong>{selected ? selected.source_kind === 'stash' ? `${nfmt(selected.listing_count || 0)}개` : selected.volume_divine != null ? `${nfmt(selected.volume_divine)} 신성` : '—' : '—'}</strong></div></div>
             {scout && <ScoutReference data={scout}/>}
           </section>
           <section className="panel market-panel" aria-label="아이템 종목 선택">
