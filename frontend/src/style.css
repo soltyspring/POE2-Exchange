@@ -132,7 +132,7 @@
 .exchange-overlay .exchange-group h3{margin:26px 0 18px;padding:8px 0 12px;font-size:19px;line-height:1.2;letter-spacing:.025em;color:#eadbb8}
 .exchange-overlay .exchange-group:first-child h3{margin-top:0}
 .exchange-overlay .exchange-blocks{display:flex;flex-direction:column;gap:28px}
-.exchange-overlay .exchange-grid{display:grid;grid-template-columns:repeat(3,minmax(0,400px));gap:8px 12px;position:relative;justify-content:start}
+.exchange-overlay .exchange-grid{display:grid;grid-template-columns:repeat(3,minmax(0,400px));gap:8px 12px;position:relative;justify-content:center}
 .exchange-overlay .exchange-grid+.exchange-grid:before{content:'';position:absolute;left:0;right:0;top:-15px;border-top:1px solid #56534b}
 .exchange-overlay .exchange-item{height:56px;gap:11px;padding:6px 12px;border-radius:3px}
 .exchange-overlay .exchange-item .market-icon{width:40px;height:40px}
