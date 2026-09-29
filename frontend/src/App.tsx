@@ -29,6 +29,7 @@ type SeasonalityCell = {weekday: number; hour: number; relative_percent: number;
 type OfficialVolumeCell = {weekday: number; hour: number; median_volume_item: number; hours: number}
 type OfficialVolume = {supported: boolean; source: string; sample_count: number; first_hour: number | null; last_hour: number | null; total_volume_item: number; cells: OfficialVolumeCell[]}
 type Seasonality = {timezone: string; lookback_days: number; sample_count: number; observed_days: number; first_sample_at: number | null; last_sample_at: number | null; source: 'poe.ninja' | 'poe2scout'; cells: SeasonalityCell[]; best_slot: SeasonalityCell | null; official_volume: OfficialVolume}
+type MarketSummary = {summary: string; generated_by: 'ai' | 'statistics'; confidence: string; model?: string}
 const weekdays = ['월', '화', '수', '목', '금', '토', '일']
 const exchangeCategories = ['Currency', 'Essences', 'Ritual', 'Runes', 'SoulCores', 'Abyss', 'Fragments', 'Breach', 'Delirium', 'Idols', 'Expedition', 'UncutGems', 'LineageSupportGems', 'Verisium']
 const currencyGroups = [
@@ -197,6 +198,8 @@ export default function App() {
   const [historyDays, setHistoryDays] = useState<28 | 56 | 84>(56)
   const [seasonalityData, setSeasonalityData] = useState<Seasonality | null>(null)
   const [seasonalityLoading, setSeasonalityLoading] = useState(false)
+  const [marketSummary, setMarketSummary] = useState<MarketSummary | null>(null)
+  const [summaryLoading, setSummaryLoading] = useState(false)
   const [heatMetric, setHeatMetric] = useState<'price' | 'volume'>('price')
   const [favorites, setFavorites] = useState<string[]>(initialFavorites)
   const [unit, setUnit] = useState<'divine'|'exalted'>('exalted')
@@ -317,6 +320,18 @@ export default function App() {
       .then((result: Seasonality) => { if (active) setSeasonalityData(result) })
       .catch(() => { if (active) setSeasonalityData(null) })
       .finally(() => { if (active) setSeasonalityLoading(false) })
+    return () => { active = false }
+  }, [selectedId, league, historyDays, chartUnit, updated])
+
+  useEffect(() => {
+    if (!league || !selectedId) { setMarketSummary(null); return }
+    let active = true
+    setSummaryLoading(true)
+    fetch(`/api/market-summary/${encodeURIComponent(selectedId)}?league=${encodeURIComponent(league)}&days=${historyDays}&unit=${chartUnit}`)
+      .then(response => { if (!response.ok) throw Error("요약 오류"); return response.json() })
+      .then((result: MarketSummary) => { if (active) setMarketSummary(result) })
+      .catch(() => { if (active) setMarketSummary(null) })
+      .finally(() => { if (active) setSummaryLoading(false) })
     return () => { active = false }
   }, [selectedId, league, historyDays, chartUnit, updated])
 
@@ -495,6 +510,7 @@ export default function App() {
         <section className="panel seasonality-panel" aria-label="요일별 매수 시간 분석">
           <div className="seasonality-heading"><div><div className="eyebrow small">BUYING WINDOW</div><h2>요일·시간대 가격 패턴</h2><p>{selected?.name || '아이템'}의 가격과 공식 교환 거래량을 한국 시간 기준으로 봅니다.</p></div><div className="seasonality-controls"><div className="seasonality-period" aria-label="분석 자료"><button className={!showVolume ? 'active' : ''} onClick={() => setHeatMetric('price')}>가격 편차</button>{seasonalityData?.official_volume.supported && <button className={showVolume ? 'active' : ''} onClick={() => setHeatMetric('volume')}>공식 거래량</button>}</div><div className="seasonality-period" aria-label="분석 기간">{([28, 56, 84] as const).map(days => <button key={days} className={historyDays === days ? 'active' : ''} onClick={() => setHistoryDays(days)}>{days / 7}주</button>)}</div></div></div>
           <div className="seasonality-summary"><div><span>{seasonalityData?.source === 'poe2scout' ? 'POE2Scout 과거 가격 기록' : '저장된 전체 시장 관측'}</span><strong>{seasonalityData ? `${nfmt(seasonalityData.sample_count)}회 · ${seasonalityData.observed_days}일` : seasonalityLoading ? '불러오는 중' : '—'}</strong></div><div><span>상대적으로 저렴했던 시간</span><strong>{seasonalityData?.best_slot ? `${weekdays[seasonalityData.best_slot.weekday]}요일 ${String(seasonalityData.best_slot.hour).padStart(2, '0')}시 · ${changeText(seasonalityData.best_slot.relative_percent)}` : '분석을 위한 기록 누적 중'}</strong></div><div><span>{seasonalityData?.official_volume.supported ? 'GGG 공식 교환량 · 선택 기간' : '분석 조건'}</span><strong>{seasonalityData?.official_volume.supported ? `${nfmt(seasonalityData.official_volume.total_volume_item)}개 · ${seasonalityData.official_volume.sample_count}시간` : '3주 이상 · 시간대별 3일 이상'}</strong></div></div>
+          <div className="ai-market-summary"><div className="ai-summary-mark">AI</div><div><div className="ai-summary-title"><strong>시세 경향 요약</strong><span>{marketSummary?.generated_by === 'ai' ? `${marketSummary.model || 'AI'} 분석` : '통계 분석'}</span></div><p>{summaryLoading ? '요일·시간대 시세 경향을 분석하고 있습니다.' : marketSummary?.summary || '분석 가능한 시세 기록을 모으고 있습니다.'}</p></div></div>
           <div className="heatmap-scroll"><div className="heatmap-grid"><div className="heatmap-corner">시각</div>{weekdays.map(day => <div key={day} className="heatmap-day">{day}요일</div>)}{Array.from({length: 24}, (_, hour) => <div className="heatmap-hour-row" key={hour}><div className="heatmap-hour">{String(hour).padStart(2, '0')}:00</div>{weekdays.map((day, weekday) => {
             const cell = heatCells.get(`${weekday}:${hour}`)
             const volume = volumeCells.get(`${weekday}:${hour}`)
