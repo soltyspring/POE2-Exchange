@@ -79,7 +79,7 @@ function PriceChart({candles, loading, interval}: {candles: Candle[]; loading: b
     if (!box.current) return
     const api = createChart(box.current, {
       width: box.current.clientWidth, height: 390,
-      layout: {background: {type: ColorType.Solid, color: '#ffffff'}, textColor: '#9aa6b7', fontFamily: 'Pretendard, Inter, system-ui, sans-serif', fontSize: 11},
+      layout: {background: {type: ColorType.Solid, color: '#ffffff'}, textColor: '#9aa6b7', fontFamily: 'Pretendard Variable, Pretendard, system-ui, sans-serif', fontSize: 11},
       grid: {vertLines: {color: '#f2f5f9'}, horzLines: {color: '#edf1f6'}},
       crosshair: {vertLine: {color: '#9aabc2', labelBackgroundColor: '#3767ba'}, horzLine: {color: '#9aabc2', labelBackgroundColor: '#3767ba'}},
       rightPriceScale: {borderColor: '#e7ecf2', scaleMargins: {top: .12, bottom: .12}},
