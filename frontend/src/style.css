@@ -158,3 +158,16 @@
 .market-icon.fallback{background:linear-gradient(145deg,#edf3fb,#dbe7f5);color:#4776ad;border:1px solid #cfdaea}
 .exchange-item .market-icon.fallback,.reward-item .market-icon.fallback{background:linear-gradient(145deg,#27384d,#172536);color:#d0a85a;border-color:#4b5561}
 
+
+/* 거래소 컨트롤 접근성 및 상태 표시 */
+.exchange-result-count{min-width:45px;color:#d4c8ae;font-size:11px;font-weight:700;text-align:right;white-space:nowrap}
+.exchange-overlay .exchange-search:focus-within{border-color:#b3985f;box-shadow:0 0 0 2px #b3985f22}
+.exchange-search kbd{padding:2px 5px;border:1px solid #4d4a43;border-radius:3px;background:#292a2a;color:#77746c;font-size:9px;font-family:inherit;white-space:nowrap}
+.exchange-nav-label{padding:0 10px 10px;color:#78736a;font-size:10px;font-weight:800;letter-spacing:.12em}
+.exchange-overlay button:focus-visible,.exchange-overlay input:focus-visible{outline:2px solid #f1c86f;outline-offset:2px}
+.exchange-overlay .exchange-item:active{transform:translateY(0)}
+.exchange-overlay .exchange-foot>span{display:flex;flex-direction:column;gap:3px}
+.exchange-overlay .exchange-foot>span strong{color:#efd79e}
+.exchange-overlay .exchange-foot>span small{color:#777d7f;font-size:9px}
+.exchange-overlay .exchange-foot button:disabled{opacity:.45;cursor:default}
+@media(max-width:900px){.exchange-result-count,.exchange-search kbd{display:none}}
