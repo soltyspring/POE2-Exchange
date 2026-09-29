@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CandlestickSeries, ColorType, LineSeries, createChart, type IChartApi, type ISeriesApi, type UTCTimestamp } from 'lightweight-charts'
-import { Activity, ArrowDownRight, ArrowUpRight, ChevronDown, Clock3, Coins, ExternalLink, LayoutDashboard, RefreshCw, Search, ShieldCheck, Star, TrendingUp, X } from 'lucide-react'
+import { Activity, ArrowDownRight, ArrowUpRight, ChevronDown, Clock3, Coins, ExternalLink, Gift, LayoutDashboard, RefreshCw, Search, ShieldCheck, Star, TrendingUp, X } from 'lucide-react'
 
 type Market = {
   league: string; id: string; category: string; category_label: string; name: string;
@@ -33,11 +33,23 @@ const weekdays = ['월', '화', '수', '목', '금', '토', '일']
 const exchangeCategories = ['Currency', 'Essences', 'Ritual', 'Runes', 'SoulCores', 'Abyss', 'Fragments', 'Breach', 'Delirium', 'Idols', 'Expedition', 'UncutGems', 'LineageSupportGems', 'Verisium']
 const currencyGroups = [
   {label: '화폐', ids: ['transmute', 'greater-orb-of-transmutation', 'perfect-orb-of-transmutation', 'aug', 'greater-orb-of-augmentation', 'perfect-orb-of-augmentation', 'regal', 'greater-regal-orb', 'perfect-regal-orb', 'exalted', 'greater-exalted-orb', 'perfect-exalted-orb', 'chaos', 'greater-chaos-orb', 'perfect-chaos-orb', 'vaal', 'alch', 'divine', 'chance', 'annul', 'fracturing-orb', 'mirror', 'hinekoras-lock', 'crystallised-corruption']},
-  {label: '주얼러의 화폐', ids: ['lesser-jewellers-orb', 'greater-jewellers-orb', 'perfect-jewellers-orb']},
+  {label: '쥬얼러의 화폐', ids: ['lesser-jewellers-orb', 'greater-jewellers-orb', 'perfect-jewellers-orb']},
   {label: '화폐 파편', ids: ['chance-shard', 'artificers-shard']},
   {label: '퀄리티 화폐', ids: ['whetstone', 'scrap', 'gcp', 'bauble']},
 ]
 const intervals = ['1m', '5m', '1h', '1d'] as const
+const rewardContents = [
+  {id: 'ritual', name: '의식', hint: '징조 · 우상', categories: ['Ritual', 'Idols']},
+  {id: 'breach', name: '균열', hint: '촉매와 균열 보상', categories: ['Breach']},
+  {id: 'delirium', name: '환영', hint: '액상 감정', categories: ['Delirium']},
+  {id: 'abyss', name: '심연', hint: '심연 전용 보상', categories: ['Abyss']},
+  {id: 'expedition', name: '탐험', hint: '탐험 화폐와 보상', categories: ['Expedition']},
+  {id: 'runes', name: '룬·베리시움', hint: '룬과 베리시움 보상', categories: ['Runes', 'Verisium']},
+  {id: 'soulcores', name: '영혼핵', hint: '영혼핵 보상', categories: ['SoulCores']},
+  {id: 'fragments', name: '보스·열쇠', hint: '조각과 성유물 열쇠', categories: ['Fragments']},
+  {id: 'lineage', name: '혈통 보조젬', hint: '고가 특수 보조젬', categories: ['LineageSupportGems']},
+] as const
+type RewardContentId = typeof rewardContents[number]['id']
 type Interval = typeof intervals[number]
 const labels: Record<Interval, string> = {'1m': '1분', '5m': '5분', '1h': '1시간', '1d': '1일'}
 const initialFavorites = (): string[] => {
@@ -169,6 +181,8 @@ export default function App() {
   const [exchangeQuery, setExchangeQuery] = useState('')
   const [exchangeSort, setExchangeSort] = useState<'game' | 'price'>('game')
   const [exchangeOpen, setExchangeOpen] = useState(false)
+  const [rewardsOpen, setRewardsOpen] = useState(false)
+  const [rewardContent, setRewardContent] = useState<RewardContentId>('ritual')
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [marketSort, setMarketSort] = useState<MarketSort>('price')
   const [sortDescending, setSortDescending] = useState(true)
@@ -391,6 +405,10 @@ export default function App() {
     {label: '기타 화폐', markets: exchangeMarkets.filter(m => !currencyGroups.some(group => group.ids.includes(m.id.replace('exchange:Currency:', ''))))},
   ].filter(group => group.markets.length) : exchangeCategory === 'all' ? exchangeCategories.map(key => ({label: data?.categories[key] || key, markets: sortExchangeMarkets(exchangeMarkets.filter(m => m.category === key))})).filter(group => group.markets.length) : [{label: exchangeSort === 'price' ? `${data?.categories[exchangeCategory] || exchangeCategory} · 비싼 순` : data?.categories[exchangeCategory] || exchangeCategory, markets: sortExchangeMarkets(exchangeMarkets)}]
   const heatCells = new Map(seasonalityData?.cells.map(cell => [`${cell.weekday}:${cell.hour}`, cell]) || [])
+  const activeRewardContent = rewardContents.find(item => item.id === rewardContent) || rewardContents[0]
+  const rewardMarkets = (data?.markets || []).filter(m => activeRewardContent.categories.some(categoryKey => categoryKey === m.category)).sort((a, b) => b.price_divine - a.price_divine)
+  const rewardPrice = (market: Market) => market.price_divine * (data?.exalted_per_divine || 0)
+  const rewardTier = (value: number) => value >= 100 ? '초고가' : value >= 10 ? '고가' : value >= 1 ? '주요' : ''
   const heatScale = Math.max(0.5, ...((seasonalityData?.cells || []).map(cell => Math.abs(cell.relative_percent))))
   const volumeCells = new Map(seasonalityData?.official_volume.cells.map(cell => [`${cell.weekday}:${cell.hour}`, cell]) || [])
   const volumeScale = Math.max(1, ...((seasonalityData?.official_volume.cells || []).map(cell => cell.median_volume_item)))
@@ -409,7 +427,7 @@ export default function App() {
     </aside>
 
     <main className="main">
-      <header className="topbar"><div className="breadcrumb">POE2 MARKET <span>/</span> <b>대시보드</b></div><div className="top-actions"><button className="exchange-launch" onClick={() => setExchangeOpen(true)}><Coins size={16}/>거래소 시세표</button><span className="live-pill"><i/> {lastFetched ? `${timeAgo(lastFetched)} 갱신` : '데이터 연결'}</span><button className={`icon-button ${refreshing ? 'spinning' : ''}`} title="선택 아이템 강제 갱신 · 캐시 무시" disabled={!selectedId || refreshing} onClick={() => void forceRefreshSelected()}><RefreshCw size={17}/></button><div className="avatar">P2</div></div></header>
+      <header className="topbar"><div className="breadcrumb">POE2 MARKET <span>/</span> <b>대시보드</b></div><div className="top-actions"><button className="reward-launch" onClick={() => setRewardsOpen(true)}><Gift size={16}/>콘텐츠 보상</button><button className="exchange-launch" onClick={() => setExchangeOpen(true)}><Coins size={16}/>거래소 시세표</button><span className="live-pill"><i/> {lastFetched ? `${timeAgo(lastFetched)} 갱신` : '데이터 연결'}</span><button className={`icon-button ${refreshing ? 'spinning' : ''}`} title="선택 아이템 강제 갱신 · 캐시 무시" disabled={!selectedId || refreshing} onClick={() => void forceRefreshSelected()}><RefreshCw size={17}/></button><div className="avatar">P2</div></div></header>
       <div className="content">
         <div className="page-heading"><div><div className="eyebrow">PATH OF EXILE 2 • ECONOMY TRACKER</div><h1>아이템 시세 차트</h1><p>리그 경제를 한눈에 확인하고, 관심 아이템의 가격 변화를 기록하세요.</p></div><label className="league-select"><span>거래 리그</span><select value={league} onChange={e => {setLeague(e.target.value); setData(null); setSelectedId('')}}>{leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select><ChevronDown size={15}/></label></div>
         {error && <div className="error-banner">{error}<button onClick={() => void fetchMarkets(true)}>다시 시도</button></div>}
@@ -458,7 +476,7 @@ export default function App() {
             <div className="market-panel-foot"><span>종목 선택 시 차트가 변경됩니다</span><span>시세 {marketCadence}분 확인</span></div>
           </section>
         </div>
-        {exchangeOpen && <div className="exchange-overlay" onMouseDown={event => {if (event.target === event.currentTarget) setExchangeOpen(false)}}><section className="exchange-panel" role="dialog" aria-modal="true" aria-label="게임 거래소 형태의 아이템 시세표">
+        {rewardsOpen && <aside className="reward-drawer" role="dialog" aria-modal="false" aria-label="콘텐츠별 주요 보상"><div className="reward-head"><div><div className="eyebrow small">CONTENT REWARDS</div><h2>콘텐츠별 주요 보상</h2><p>게임 중 가치 있는 드롭을 빠르게 확인하세요.</p></div><button onClick={() => setRewardsOpen(false)} aria-label="콘텐츠 보상 닫기"><X size={20}/></button></div><div className="reward-tabs">{rewardContents.map(content => <button key={content.id} className={rewardContent === content.id ? 'active' : ''} onClick={() => setRewardContent(content.id)}><strong>{content.name}</strong><small>{content.hint}</small></button>)}</div><div className="reward-summary"><span>{activeRewardContent.name}</span><strong>비싼 순 · {rewardMarkets.length}개</strong><small>현재 시세 기준, 1개당 엑잘 환산</small></div><div className="reward-list">{rewardMarkets.map((market, index) => { const value = rewardPrice(market); const tier = rewardTier(value); return <button key={market.id} className="reward-item" onClick={() => setSelectedId(market.id)}><span className="reward-rank">{index + 1}</span><MarketIcon market={market}/><span className="reward-name"><strong>{market.name}</strong><small>{market.category_label}</small></span>{tier && <em className={`reward-tier tier-${tier === '초고가' ? 'top' : tier === '고가' ? 'high' : 'main'}`}>{tier}</em>}<span className="reward-value"><strong>{price(value)}</strong><small>엑잘</small></span></button>})}{!rewardMarkets.length && <div className="reward-empty">시세 데이터를 불러오는 중입니다.</div>}</div><div className="reward-foot"><span>poe.ninja 관측 시세 · 체결가와 다를 수 있음</span><button onClick={() => {setRewardsOpen(false); if (rewardMarkets[0]) setSelectedId(rewardMarkets[0].id)}}>1위 차트 보기</button></div></aside>}        {exchangeOpen && <div className="exchange-overlay" onMouseDown={event => {if (event.target === event.currentTarget) setExchangeOpen(false)}}><section className="exchange-panel" role="dialog" aria-modal="true" aria-label="게임 거래소 형태의 아이템 시세표">
           <div className="exchange-heading"><div><div className="eyebrow small">GAME EXCHANGE</div><h2>아이템 거래소 시세표</h2><p>게임의 아이템 선택 화면처럼 분류별로 살펴보고, 1개당 엑잘 환산 시세를 확인하세요.</p></div><div className="exchange-tools"><div className="exchange-sort" role="group" aria-label="아이템 정렬"><button className={exchangeSort === 'game' ? 'active' : ''} onClick={() => setExchangeSort('game')}>게임 순서</button><button className={exchangeSort === 'price' ? 'active' : ''} onClick={() => setExchangeSort('price')}>비싼 순</button></div><label className="exchange-search"><Search size={16}/><input value={exchangeQuery} onChange={e => setExchangeQuery(e.target.value)} placeholder="현재 분류에서 검색" aria-label="거래소 아이템 검색"/>{exchangeQuery && <button onClick={() => setExchangeQuery('')} title="검색어 지우기"><X size={15}/></button>}</label></div><button className="exchange-close" onClick={() => setExchangeOpen(false)} aria-label="거래소 시세표 닫기"><X size={20}/></button></div>
           <div className="exchange-body"><nav className="exchange-nav" aria-label="거래소 아이템 분류"><button className={exchangeCategory === 'all' ? 'active' : ''} onClick={() => {setExchangeCategory('all'); setExchangeQuery('')}}><span>모두</span><small>{data?.markets.filter(m => exchangeCategories.includes(m.category)).length || 0}</small></button>{exchangeCategories.filter(key => data?.categories[key]).map(key => <button key={key} className={exchangeCategory === key ? 'active' : ''} onClick={() => {setExchangeCategory(key); setExchangeQuery('')}}><span>{data?.categories[key]}</span><small>{data?.markets.filter(m => m.category === key).length}</small></button>)}</nav><div className="exchange-items">{groupedExchangeMarkets.map(group => <div className="exchange-group" key={group.label}><h3><span>{group.label}</span><small>{group.markets.length}개</small></h3><div className="exchange-blocks">{Array.from({length: Math.ceil(group.markets.length / 9)}, (_, block) => <div className="exchange-grid" key={`${group.label}:${block}`}>{group.markets.slice(block * 9, block * 9 + 9).map(m => <button key={m.id} className={`exchange-item ${selectedId === m.id ? 'selected' : ''}`} onClick={() => setSelectedId(m.id)} title={`${m.name} · ${exchangeQuote(m).value} ${exchangeQuote(m).unit}`}><MarketIcon market={m}/><span className="exchange-item-name">{m.name}</span><span className="exchange-item-price">{exchangeQuote(m).value} <small>{exchangeQuote(m).unit}</small></span></button>)}</div>)}</div></div>)}{!exchangeMarkets.length && <div className="exchange-no-results">표시할 아이템이 없습니다.</div>}</div></div>
           <div className="exchange-foot"><span>poe.ninja 관측 시세의 엑잘 환산값 · 엑잘티드 오브는 카오스 환산 · 실제 체결 가격과 다를 수 있습니다</span><button onClick={() => setExchangeOpen(false)}>선택 종목 차트 보기</button></div>
