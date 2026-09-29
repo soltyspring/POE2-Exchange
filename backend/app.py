@@ -48,9 +48,10 @@ USER_AGENT = os.getenv(
     "POE_NINJA_USER_AGENT", "Poe2MinuteChart/0.1 (personal local dashboard; contact: local operator)"
 )
 MARKET_POLL_SECONDS = max(300, int(os.getenv("POE_MARKET_POLL_SECONDS", "900")))
-SELECTED_POLL_SECONDS = max(60, int(os.getenv("POE_SELECTED_POLL_SECONDS", "60")))
-SCOUT_POLL_SECONDS = max(60, int(os.getenv("POE_SCOUT_POLL_SECONDS", "60")))
+SELECTED_POLL_SECONDS = max(60, int(os.getenv("POE_SELECTED_POLL_SECONDS", "300")))
+SCOUT_POLL_SECONDS = max(60, int(os.getenv("POE_SCOUT_POLL_SECONDS", "300")))
 LEAGUE_CACHE_SECONDS = max(1800, int(os.getenv("POE_LEAGUE_CACHE_SECONDS", "3600")))
+HTTP_MIN_GAP_SECONDS = max(.1, float(os.getenv("POE_HTTP_MIN_GAP_SECONDS", ".5")))
 TRADE2_LIVE_ENABLED = os.getenv("POE_TRADE2_LIVE", "0").lower() in {"1", "true", "on", "yes"}
 TRADE2_LIVE_SECONDS = max(15, int(os.getenv("POE_TRADE2_LIVE_SECONDS", "30")))
 TRADE2_MIN_GAP_SECONDS = max(2.0, float(os.getenv("POE_TRADE2_MIN_GAP_SECONDS", "3")))
@@ -651,6 +652,8 @@ class Collector:
         self.scout_metadata: dict[str, tuple[float, dict]] = {}
         self.request_sem = asyncio.Semaphore(3)
         self.host_retry_at: dict[str, float] = {}
+        self.host_locks: dict[str, asyncio.Lock] = {}
+        self.host_last_request: dict[str, float] = {}
         self.trade2_lock = asyncio.Lock()
         self.trade2_cache: dict[tuple[str, str, str], tuple[float, dict]] = {}
         self.trade2_last_request = 0.0
@@ -666,11 +669,17 @@ class Collector:
         host = urlsplit(url).netloc
         delay = 1.0
         for attempt in range(MAX_HTTP_RETRIES):
-            async with self.request_sem:
-                remaining = self.host_retry_at.get(host, 0) - time.time()
-                if remaining > 0:
-                    raise httpx.HTTPError(f"{host} rate limited; retry in {remaining:.0f}s")
-                response = await self.client.get(url, headers=headers)
+            host_lock = self.host_locks.setdefault(host, asyncio.Lock())
+            async with host_lock:
+                async with self.request_sem:
+                    remaining = self.host_retry_at.get(host, 0) - time.time()
+                    if remaining > 0:
+                        raise httpx.HTTPError(f"{host} rate limited; retry in {remaining:.0f}s")
+                    gap = HTTP_MIN_GAP_SECONDS - (time.monotonic() - self.host_last_request.get(host, 0))
+                    if gap > 0:
+                        await asyncio.sleep(gap)
+                    response = await self.client.get(url, headers=headers)
+                    self.host_last_request[host] = time.monotonic()
             if response.status_code not in (429, 502, 503, 504):
                 return response
             retry_after = response.headers.get("retry-after")
