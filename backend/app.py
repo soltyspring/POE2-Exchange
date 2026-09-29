@@ -39,9 +39,9 @@ STASH_TYPES = {
 CATEGORIES = {**EXCHANGE_TYPES, **STASH_TYPES}
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = Path(os.getenv("POE_DB_PATH", str(ROOT / "data" / "prices.sqlite3")))
-AI_API_KEY = os.getenv("POE_AI_API_KEY", "").strip()
-AI_API_URL = os.getenv("POE_AI_API_URL", "https://api.openai.com/v1/chat/completions").strip()
-AI_MODEL = os.getenv("POE_AI_MODEL", "gpt-4.1-mini").strip()
+AI_API_KEY = os.getenv("CLAUDE_API_KEY", "").strip()
+AI_API_URL = os.getenv("CLAUDE_API_URL", "https://api.anthropic.com/v1/messages").strip()
+AI_MODEL = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001").strip()
 AI_SUMMARY_CACHE: dict[str, tuple[float, dict]] = {}
 AI_SUMMARY_TTL = 3600
 USER_AGENT = os.getenv(
@@ -618,12 +618,12 @@ def statistical_market_summary(name: str, data: dict) -> dict:
 async def ai_market_summary(name: str, data: dict) -> dict:
     fallback = statistical_market_summary(name, data)
     if not AI_API_KEY: return fallback
-    payload = {"model": AI_MODEL, "temperature": 0.2, "max_tokens": 260, "messages": [{"role": "system", "content": "POE2 시세 통계를 한국어 3~4문장으로 요약한다. 최고가·저가 경향, 거래량 집중 시간, 표본 한계를 설명하고 가격을 예측하지 않는다."}, {"role": "user", "content": json.dumps({"item": name, "statistics": fallback, "data": data}, ensure_ascii=False)}]}
+    payload = {"model": AI_MODEL, "temperature": 0.2, "max_tokens": 260, "system": "POE2 시세 통계를 한국어 3~4문장으로 요약한다. 최고가·저가 경향, 거래량 집중 시간, 표본 한계를 설명하고 가격을 예측하지 않는다.", "messages": [{"role": "user", "content": json.dumps({"item": name, "statistics": fallback, "data": data}, ensure_ascii=False)}]}
     try:
         async with httpx.AsyncClient(timeout=20) as client:
-            response = await client.post(AI_API_URL, headers={"Authorization": f"Bearer {AI_API_KEY}"}, json=payload)
+            response = await client.post(AI_API_URL, headers={"x-api-key": AI_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"}, json=payload)
             response.raise_for_status()
-            content = response.json()["choices"][0]["message"]["content"].strip()
+            content = response.json()["content"][0]["text"].strip()
         return {**fallback, "summary": content, "generated_by": "ai", "model": AI_MODEL}
     except (httpx.HTTPError, KeyError, IndexError, ValueError) as exc:
         logging.warning("AI market summary failed: %s", exc)
