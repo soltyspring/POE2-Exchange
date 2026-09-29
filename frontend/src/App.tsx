@@ -25,6 +25,7 @@ type Scout = {source: string; name: string; current_price_exalted: number; logs:
 type LiveQuote = {source: string; price_exalted: number; price_divine: number | null; best: number; median: number; count: number | null; observed_at: number; cache_seconds: number}
 type League = {id: string; name: string}
 type MarketSort = 'name' | 'price' | 'change'
+type MarketScope = 'all' | 'favorites' | 'recent'
 type SeasonalityCell = {weekday: number; hour: number; relative_percent: number; days: number}
 type OfficialVolumeCell = {weekday: number; hour: number; median_volume_item: number; hours: number}
 type OfficialVolume = {supported: boolean; source: string; sample_count: number; first_hour: number | null; last_hour: number | null; total_volume_item: number; cells: OfficialVolumeCell[]}
@@ -56,6 +57,9 @@ const labels: Record<Interval, string> = {'1m': '1분', '5m': '5분', '1h': '1�
 const initialFavorites = (): string[] => {
   try { return JSON.parse(localStorage.getItem('poe2-favorites') || '[]') } catch { return [] }
 }
+const initialRecent = (): string[] => {
+  try { return JSON.parse(localStorage.getItem('poe2-recent-markets') || '[]') } catch { return [] }
+}
 const nfmt = (n: number, max = 2) => new Intl.NumberFormat('ko-KR', {maximumFractionDigits: max}).format(n)
 const price = (n: number) => n > 0 && n < .001 ? '<0.001' : nfmt(n, 3)
 const compactPrice = (n: number) => n >= 100 ? nfmt(n, 1) : n >= 1 ? nfmt(n, 3) : n > 0 && n < .001 ? '<0.001' : nfmt(n, 3)
@@ -82,7 +86,7 @@ const chartTimeLabel = (value: unknown, interval: Interval) => {
   return date.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit', hour12:false})
 }
 
-function PriceChart({candles, loading, interval}: {candles: Candle[]; loading: boolean; interval: Interval}) {
+function PriceChart({candles, loading, interval, seriesKey}: {candles: Candle[]; loading: boolean; interval: Interval; seriesKey: string}) {
   const box = useRef<HTMLDivElement>(null)
   const chart = useRef<IChartApi | null>(null)
   const candleSeries = useRef<ISeriesApi<'Candlestick'> | null>(null)
@@ -118,6 +122,7 @@ function PriceChart({candles, loading, interval}: {candles: Candle[]; loading: b
       localization: {locale: 'ko-KR', timeFormatter: (time: unknown) => chartTimeLabel(time, interval)},
     })
   }, [interval])
+  useEffect(() => { fitted.current = false }, [seriesKey])
   useEffect(() => {
     const api = chart.current
     const series = candleSeries.current
@@ -192,7 +197,7 @@ export default function App() {
   const [exchangeOpen, setExchangeOpen] = useState(false)
   const [rewardsOpen, setRewardsOpen] = useState(false)
   const [rewardContent, setRewardContent] = useState<RewardContentId>('ritual')
-  const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const [marketScope, setMarketScope] = useState<MarketScope>('all')
   const [marketSort, setMarketSort] = useState<MarketSort>('price')
   const [sortDescending, setSortDescending] = useState(true)
   const [marketLimit, setMarketLimit] = useState(160)
@@ -203,6 +208,7 @@ export default function App() {
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [heatMetric, setHeatMetric] = useState<'price' | 'volume'>('price')
   const [favorites, setFavorites] = useState<string[]>(initialFavorites)
+  const [recentIds, setRecentIds] = useState<string[]>(initialRecent)
   const [unit, setUnit] = useState<'divine'|'exalted'>('exalted')
   const [scout, setScout] = useState<Scout | null>(null)
   const [liveQuote, setLiveQuote] = useState<LiveQuote | null>(null)
@@ -216,6 +222,11 @@ export default function App() {
   const chartKey = `${selectedId}:${league}:${interval}:${chartUnit}`
 
   useEffect(() => { localStorage.setItem('poe2-favorites', JSON.stringify(favorites)) }, [favorites])
+  useEffect(() => { localStorage.setItem('poe2-recent-markets', JSON.stringify(recentIds)) }, [recentIds])
+  useEffect(() => {
+    if (!selectedId) return
+    setRecentIds(items => [selectedId, ...items.filter(id => id !== selectedId)].slice(0, 12))
+  }, [selectedId])
   useEffect(() => {
     if (!exchangeOpen) return
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setExchangeOpen(false) }
@@ -375,20 +386,24 @@ export default function App() {
   const selected = data?.markets.find(m => m.id === selectedId)
   const marketMap = useMemo(() => new Map(data?.markets.map(m => [m.id, m]) || []), [data])
   const watchlist = favorites.map(id => marketMap.get(id)).filter((m): m is Market => !!m)
+  const marketInScope = (market: Market) => marketScope === 'all' || (marketScope === 'favorites' ? favorites.includes(market.id) : recentIds.includes(market.id))
   const filtered = useMemo(() => (data?.markets || []).filter(m =>
-    (category === 'all' || m.category === category) && (!favoritesOnly || favorites.includes(m.id)) &&
+    (category === 'all' || m.category === category) && marketInScope(m) &&
     (!query.trim() || `${m.name} ${m.base_type || ''} ${m.category_label}`.toLocaleLowerCase('ko-KR').includes(query.trim().toLocaleLowerCase('ko-KR')))
-  ), [data, category, favoritesOnly, favorites, query])
-  const sortedMarkets = useMemo(() => [...filtered].sort((a, b) => {
+  ), [data, category, marketScope, favorites, recentIds, query])
+  const sortedMarkets = useMemo(() => {
+    if (marketScope === 'recent') return [...filtered].sort((a, b) => recentIds.indexOf(a.id) - recentIds.indexOf(b.id))
+    return [...filtered].sort((a, b) => {
     if (marketSort === 'name') return a.name.localeCompare(b.name, 'ko-KR') * (sortDescending ? -1 : 1)
     const aValue = marketSort === 'price' ? a.price_divine : a.trend_percent
     const bValue = marketSort === 'price' ? b.price_divine : b.trend_percent
     if (aValue == null) return bValue == null ? a.name.localeCompare(b.name, 'ko-KR') : 1
     if (bValue == null) return -1
     return (aValue - bValue) * (sortDescending ? -1 : 1) || a.name.localeCompare(b.name, 'ko-KR')
-  }), [filtered, marketSort, sortDescending])
+    })
+  }, [filtered, marketSort, sortDescending, marketScope, recentIds])
   const visibleMarkets = sortedMarkets.slice(0, marketLimit)
-  useEffect(() => { setMarketLimit(160) }, [query, category, favoritesOnly, marketSort, sortDescending])
+  useEffect(() => { setMarketLimit(160) }, [query, category, marketScope, marketSort, sortDescending])
   const changeSort = (next: MarketSort) => {
     if (marketSort === next) setSortDescending(value => !value)
     else { setMarketSort(next); setSortDescending(next !== 'name') }
@@ -408,13 +423,11 @@ export default function App() {
     const value = market.price_divine / exaltedMarket.price_divine
     return {value: price(value), unit: '엑잘'}
   }
-  const marketPrice = (market: Market) => market.id === 'exchange:Currency:exalted'
-    ? chaosMarket?.price_divine ? price(market.price_divine / chaosMarket.price_divine) : '—'
-    : displayPrice(market.price_divine)
   const marketRowPrice = (market: Market) => market.id === 'exchange:Currency:exalted'
     ? chaosMarket?.price_divine ? compactPrice(market.price_divine / chaosMarket.price_divine) : '—'
     : compactPrice(unit === 'exalted' ? market.price_divine * (data?.exalted_per_divine || 0) : market.price_divine)
-  const marketUnit = (market: Market) => market.id === 'exchange:Currency:exalted' ? '카오스 / 1 엑잘' : unitLabel
+  const summaryExalted = (market: Market) => exaltedMarket?.price_divine ? price(market.price_divine / exaltedMarket.price_divine) : '—'
+  const summaryChaos = (market: Market) => chaosMarket?.price_divine ? price(market.price_divine / chaosMarket.price_divine) : '—'
   const selectedPriceText = selected && chaosReference ? (chaosMarket?.price_divine ? price(selected.price_divine / chaosMarket.price_divine) : '—') : selected ? (liveQuote
     ? price(unit === 'exalted' ? liveQuote.price_exalted : (liveQuote.price_divine ?? selected.price_divine))
     : displayPrice(selected.price_divine)) : '—'
@@ -448,8 +461,8 @@ export default function App() {
     <aside className="sidebar">
       <div className="brand"><div className="brand-mark"><TrendingUp size={22} strokeWidth={2.8}/></div><div><strong>POE2 <span>MARKET</span></strong><small>PRIVATE PRICE TERMINAL</small></div></div>
       <div className="side-section-label">WORKSPACE</div>
-      <button className={`side-link ${!favoritesOnly ? 'active' : ''}`} onClick={() => setFavoritesOnly(false)}><LayoutDashboard size={18}/>마켓 대시보드</button>
-      <button className={`side-link ${favoritesOnly ? 'active' : ''}`} onClick={() => setFavoritesOnly(true)}><Star size={18}/>관심 목록 <span className="side-count">{watchlist.length}</span></button>
+      <button className={`side-link ${marketScope !== 'favorites' ? 'active' : ''}`} onClick={() => setMarketScope('all')}><LayoutDashboard size={18}/>마켓 대시보드</button>
+      <button className={`side-link ${marketScope === 'favorites' ? 'active' : ''}`} onClick={() => setMarketScope('favorites')}><Star size={18}/>관심 목록 <span className="side-count">{watchlist.length}</span></button>
       <div className="side-section-label markets-label">MARKETS</div>
       <button className={`side-link ${category === 'all' ? 'selected' : ''}`} onClick={() => setCategory('all')}><span className="side-dot all"/>전체 마켓</button>
       {Object.entries(data?.categories || {}).map(([key, label]) => <button key={key} className={`side-link ${category === key ? 'selected' : ''}`} onClick={() => setCategory(key)}><span className="side-dot"/>{label}</button>)}
@@ -463,14 +476,14 @@ export default function App() {
         {error && <div className="error-banner">{error}<button onClick={() => void fetchMarkets(true)}>다시 시도</button></div>}
         <div className="summary-grid">
 
-          {currencyMarkets.filter(m => m.id !== 'exchange:Currency:divine').map(m => <button key={m.id} className="summary-card quote" onClick={() => setSelectedId(m.id)}><span className="summary-label"><MarketIcon market={m}/>{m.name}</span><strong>{marketPrice(m)} <em>{marketUnit(m)}</em></strong><span className={`summary-change ${changeClass(m.trend_percent)}`}>{m.trend_percent != null && (m.trend_percent >= 0 ? <ArrowUpRight size={15}/> : <ArrowDownRight size={15}/>)}{changeText(m.trend_percent)} <small>최근 변동</small></span></button>)}
+          {currencyMarkets.map(m => <button key={m.id} className="summary-card quote currency-summary" onClick={() => setSelectedId(m.id)}><span className="summary-label"><MarketIcon market={m}/>{m.name}</span><div className="currency-summary-values"><span><small>엑잘 환산</small><strong>{summaryExalted(m)} <em>엑잘</em></strong></span><span><small>카오스 환산</small><strong>{summaryChaos(m)} <em>카오스</em></strong></span></div><span className={`summary-change ${changeClass(m.trend_percent)}`}>{m.trend_percent != null && (m.trend_percent >= 0 ? <ArrowUpRight size={15}/> : <ArrowDownRight size={15}/>)}{changeText(m.trend_percent)} <small>최근 변동</small></span></button>)}
           
         </div>
         <div className="main-grid">
           <section className="panel chart-panel"><div className="panel-head chart-head"><div className="selected-title">{selected ? <MarketIcon market={selected} size="large"/> : <span className="market-icon large"><Coins/></span>}<div><div className="selected-sub">{selected?.category_label || 'MARKET'} {selected?.base_type ? `· ${selected.base_type}` : ''}</div><h2>{selected?.name || (loading ? '시세를 불러오는 중...' : '아이템을 선택하세요')}</h2></div></div><button className={`favorite-button ${selected && favorites.includes(selected.id) ? 'saved' : ''}`} title="관심 목록" disabled={!selected} onClick={() => selected && toggleFavorite(selected.id)}><Star size={19} fill={selected && favorites.includes(selected.id) ? 'currentColor' : 'none'}/></button></div>
             <div className="price-line"><strong>{selectedPriceText} <em>{chaosReference ? `카오스 / 1 ${selectedId === 'exchange:Currency:divine' ? '신성' : '엑잘'}` : unitLabel}</em></strong><span className={`price-change ${changeClass(selected?.trend_percent ?? null)}`}>{changeText(selected?.trend_percent ?? null)} <small>poe.ninja 변동</small></span></div>
             {liveQuote && !chaosReference && <div className="live-source">Trade2 매물 호가 · 중앙값 {price(liveQuote.price_exalted)} 엑잘{liveQuote.count != null ? ` · ${liveQuote.count}개 매물` : ''} · {timeAgo(liveQuote.observed_at)}</div>}<div className="chart-toolbar"><div className="intervals">{intervals.map(item => <button key={item} className={interval === item ? 'active' : ''} onClick={() => setInterval(item)}>{labels[item]}</button>)}</div>{chaosReference ? <div className="units special-unit">1 {selectedId === 'exchange:Currency:divine' ? '신성' : '엑잘'} = 카오스</div> : <div className="units"><button className={unit === 'divine' ? 'active' : ''} onClick={() => setUnit('divine')}>신성</button><button className={unit === 'exalted' ? 'active' : ''} onClick={() => setUnit('exalted')}>엑잘</button></div>}</div>
-            <PriceChart key={chartKey} candles={candlesKey === chartKey ? candles : []} loading={chartLoading || candlesKey !== chartKey} interval={interval}/>
+            <PriceChart key={chartKey} candles={candlesKey === chartKey ? candles : []} loading={chartLoading || candlesKey !== chartKey} interval={interval} seriesKey={chartKey}/>
             <div className="chart-caption"><span><span className="caption-dot"/> {interval === '1m' ? '1분 간격 가격 관측값' : `${labels[interval]} 구간의 관측값 OHLC`}</span><span>{chartKind === 'live_listings' ? `Trade2 매물 호가 관측 · ${Math.round((data?.trade2_live_seconds || 30))}초 확인 · 체결가 아님` : `poe.ninja 시세 관측 · 선택 ${selectedCadence}분 확인 · 체결가 아님`}</span></div>
             <div className="market-facts"><div><span>마지막 성공 갱신</span><strong>{selectedSource?.fetched_at ? clock(selectedSource.fetched_at) : selected ? clock(selected.observed_at) : '—'}</strong></div><div><span>다음 자동 확인</span><strong>{selectedSource?.next_refresh_at ? clock(selectedSource.next_refresh_at) : `${selectedCadence}분 주기`}</strong></div><div><span>캐시 상태</span><strong>{selectedSource ? `${selectedSource.cache_state === 'fresh' ? '정상' : selectedSource.cache_state === 'error' ? '오류 · 이전 값' : '갱신 대기'}${selectedSource.conditional_cache ? ' · ETag' : ''}` : '—'}</strong></div><div><span>{selected?.source_kind === 'stash' ? '현재 매물' : '거래 규모'}</span><strong>{selected ? selected.source_kind === 'stash' ? `${nfmt(selected.listing_count || 0)}개` : selected.volume_divine != null ? `${nfmt(selected.volume_divine)} 신성` : '—' : '—'}</strong></div></div>
             {scout && <ScoutReference data={scout}/>}
@@ -478,8 +491,8 @@ export default function App() {
           <section className="panel market-panel" aria-label="아이템 종목 선택">
             <div className="market-panel-title"><div><div className="eyebrow small">MARKET SELECTOR</div><h2>아이템 종목</h2></div><span>{nfmt(filtered.length)}개</span></div>
             <div className="market-tabs" role="tablist" aria-label="종목 목록">
-              <button role="tab" aria-selected={!favoritesOnly} className={!favoritesOnly ? 'active' : ''} onClick={() => setFavoritesOnly(false)}>전체 <span>{nfmt(data?.markets.length || 0)}</span></button>
-              <button role="tab" aria-selected={favoritesOnly} className={favoritesOnly ? 'active' : ''} onClick={() => setFavoritesOnly(true)}>관심 <span>{nfmt(watchlist.length)}</span></button>
+              <button role="tab" aria-selected={marketScope === 'all'} className={marketScope === 'all' ? 'active' : ''} onClick={() => setMarketScope('all')}>전체 <span>{nfmt(data?.markets.length || 0)}</span></button>
+              <button role="tab" aria-selected={marketScope === 'favorites'} className={marketScope === 'favorites' ? 'active' : ''} onClick={() => setMarketScope('favorites')}>관심 <span>{nfmt(watchlist.length)}</span></button>
             </div>
             <div className="market-filters">
               <label className="market-search"><Search size={16}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="아이템 이름 검색" aria-label="아이템 이름 검색"/>{query && <button type="button" title="검색어 지우기" onClick={() => setQuery('')}><X size={14}/></button>}</label>
@@ -500,7 +513,7 @@ export default function App() {
                   <span className={`market-row-change ${changeClass(m.trend_percent)}`}>{changeText(m.trend_percent)}</span>
                 </button>
               </div>)}
-              {!sortedMarkets.length && <div className="market-list-empty"><Search size={21}/><strong>{loading ? '시세를 불러오는 중입니다' : favoritesOnly && !watchlist.length ? '관심 아이템이 없습니다' : '검색 결과가 없습니다'}</strong><span>{favoritesOnly && !watchlist.length ? '종목의 별표를 눌러 추가하세요.' : '검색어 또는 분류를 변경해 보세요.'}</span></div>}
+              {!sortedMarkets.length && <div className="market-list-empty"><Search size={21}/><strong>{loading ? '시세를 불러오는 중입니다' : marketScope === 'favorites' && !watchlist.length ? '관심 아이템이 없습니다' : '검색 결과가 없습니다'}</strong><span>{marketScope === 'favorites' && !watchlist.length ? '종목의 별표를 눌러 추가하세요.' : '검색어 또는 분류를 변경해 보세요.'}</span></div>}
               {visibleMarkets.length < sortedMarkets.length && <button className="market-load-more" onClick={() => setMarketLimit(limit => limit + 160)}>더 보기 <span>{nfmt(visibleMarkets.length)} / {nfmt(sortedMarkets.length)}</span></button>}
             </div>
             <div className="market-panel-foot"><span>종목 선택 시 차트가 변경됩니다</span><span>시세 {marketCadence}분 확인</span></div>
