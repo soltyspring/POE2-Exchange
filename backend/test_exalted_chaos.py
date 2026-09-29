@@ -17,13 +17,13 @@ class ExaltedChaosTests(unittest.IsolatedAsyncioTestCase):
             now = int(time.time())
             bucket = now // 900 * 900 - 900
             with app.connect() as db:
-                for market_id, current in (("exalted", 0.002), ("chaos", 0.12)):
+                for market_id, current in (("exalted", 0.002), ("divine", 1.0), ("chaos", 0.12)):
                     db.execute("""INSERT INTO markets VALUES
                         ('Test',?,'Currency','화폐',?,NULL,NULL,?,NULL,NULL,NULL,'exchange',?,?)""",
                         (f"exchange:Currency:{market_id}", market_id, current, now, now))
                     db.execute("INSERT INTO market_keys (league,market_id) VALUES ('Test',?)",
                                (f"exchange:Currency:{market_id}",))
-                for market_id, historical in (("exalted", 0.002), ("chaos", 0.1)):
+                for market_id, historical in (("exalted", 0.002), ("divine", 1.0), ("chaos", 0.1)):
                     db.execute("""INSERT INTO market_snapshots VALUES
                         ((SELECT id FROM market_keys WHERE league='Test' AND market_id=?),?,?,?,?)""",
                         (f"exchange:Currency:{market_id}", bucket, historical, None, bucket))
@@ -35,6 +35,13 @@ class ExaltedChaosTests(unittest.IsolatedAsyncioTestCase):
             self.assertAlmostEqual(result["candles"][0]["close"], 0.02)
             self.assertAlmostEqual(result["candles"][-1]["close"], 0.002 / 0.12)
             self.assertEqual(app.seasonality("Test", "exchange:Currency:exalted", 7, "chaos")["sample_count"], 1)
+            with patch.object(app.collector, "refresh_market", AsyncMock(return_value={})), \
+                 patch.object(app.collector, "get_live_market_quote", AsyncMock(return_value=None)):
+                divine = await app.candles("exchange:Currency:divine", "Test", "1m", "chaos", 500)
+            self.assertEqual(divine["unit"], "chaos")
+            self.assertAlmostEqual(divine["candles"][0]["close"], 10.0)
+            self.assertAlmostEqual(divine["candles"][-1]["close"], 1.0 / 0.12)
+            self.assertEqual(app.seasonality("Test", "exchange:Currency:divine", 7, "chaos")["sample_count"], 1)
             gc.collect()
 
 
