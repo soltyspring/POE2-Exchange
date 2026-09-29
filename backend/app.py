@@ -299,6 +299,10 @@ def normalize(category: str, payload: dict, scout_items: dict | None = None):
 
 def save_markets(league: str, rows: list[tuple]):
     with connect() as db:
+        category = rows[0][1]
+        previous_ids = {item[0] for item in db.execute(
+            "SELECT id FROM markets WHERE league=? AND category=?", (league, category))}
+        current_ids = {row[0] for row in rows}
         for row in rows:
             old = db.execute("SELECT price_divine, changed_at FROM markets WHERE league=? AND id=?",
                              (league, row[0])).fetchone()
@@ -311,6 +315,8 @@ def save_markets(league: str, rows: list[tuple]):
                 listing_count=excluded.listing_count, trend_percent=excluded.trend_percent,
                 source_kind=excluded.source_kind, observed_at=excluded.observed_at,
                 changed_at=excluded.changed_at""", (league, *row, changed_at))
+        db.executemany("DELETE FROM markets WHERE league=? AND id=?",
+                       ((league, stale_id) for stale_id in previous_ids - current_ids))
 
 
 def enrich_exchange_metadata(league: str, scout_items: dict):
