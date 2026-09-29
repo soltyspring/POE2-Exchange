@@ -89,6 +89,8 @@ tailscale serve status
 
 화면의 API 요청은 같은 주소의 `/api`로 전달되고 가격 수집은 우분투 백엔드가 계속 수행합니다. 프런트엔드 변경을 배포할 때는 다시 빌드·복사한 뒤 백엔드를 재시작합니다. 공개 인터넷 주소가 필요한 경우에는 Tailscale Funnel이나 Cloudflare Tunnel과 별도의 접근 제어를 설정해야 합니다.
 
+공개 링크를 허용하려면 Tailscale 관리자에서 Funnel을 승인한 후 우분투에서 `tailscale funnel --bg --yes 18080`을 실행합니다. 이 주소는 Tailscale 앱 없이 누구나 접속할 수 있고 별도 로그인은 없습니다. 수집기, DB, 정적 화면은 모두 우분투에 있으므로 로컬 PC의 전원 상태에 의존하지 않습니다. 공개를 중지할 때는 `tailscale funnel --https=443 off`를 실행합니다.
+
 ## API
 
 - `GET /api/leagues`
