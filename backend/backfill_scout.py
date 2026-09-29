@@ -8,7 +8,14 @@ from urllib.parse import quote
 
 import httpx
 
-from app import USER_AGENT, connect, init_db
+from app import EXCHANGE_TYPES, USER_AGENT, connect, init_db
+
+SCOUT_CATEGORIES = {
+    "currency": "Currency", "essences": "Essences", "lineagesupportgems": "LineageSupportGems",
+    "runes": "Runes", "soulcores": "SoulCores", "ritual": "Ritual", "breach": "Breach",
+    "delirium": "Delirium", "fragments": "Fragments", "abyss": "Abyss", "uncutgems": "UncutGems",
+    "idol": "Idols", "expedition": "Expedition", "verisium": "Verisium",
+}
 
 
 def import_history(league: str, limit: int = 1000, pause: float = 1.0):
@@ -19,11 +26,19 @@ def import_history(league: str, limit: int = 1000, pause: float = 1.0):
         response = client.get(f"{root}/Items")
         response.raise_for_status()
         items = [item for item in response.json()
-                 if item.get("CategoryApiId") == "currency" and item.get("ApiId")]
+                 if item.get("ApiId") and item.get("CategoryApiId") in SCOUT_CATEGORIES]
         with connect() as db:
             for item in items:
                 api_id = str(item["ApiId"])
-                market_id = f"exchange:Currency:{api_id}"
+                category = SCOUT_CATEGORIES[str(item["CategoryApiId"])]
+                if category not in EXCHANGE_TYPES:
+                    counts["skipped"] += 1
+                    continue
+                market_id = f"exchange:{category}:{api_id}"
+                exists = db.execute("SELECT 1 FROM markets WHERE league=? AND id=?", (league, market_id)).fetchone()
+                if not exists:
+                    counts["skipped"] += 1
+                    continue
                 time.sleep(pause)
                 try:
                     response = client.get(f"{root}/Items/{item['ItemId']}/History",
