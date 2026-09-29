@@ -256,3 +256,40 @@ html{scroll-behavior:smooth}
 .market-list-units{display:flex;flex:none;padding:2px;border:1px solid #d8e2ee;border-radius:6px;background:#f4f7fb}.market-list-units button{height:32px;min-width:42px;padding:0 8px;border:0;border-radius:4px;background:transparent;color:#70869f;font-size:11px;font-weight:800}.market-list-units button.active{background:#fff;color:#2569bd;box-shadow:0 1px 4px #1537611f}
 .market-row-price small{display:inline;font-size:9px;color:#8498ad;font-weight:600}
 @media(max-width:560px){.market-filters{flex-wrap:wrap}.market-search{flex-basis:100%}.market-category-menu{flex:1;width:auto}.market-category-options{left:0;right:auto}.market-list-units{margin-left:auto}}
+
+/* 콘텐츠 보상: 대시보드와 같은 밝은 카드형 정보 구조 */
+.reward-drawer{grid-template-columns:226px minmax(0,1fr);grid-template-rows:92px 76px minmax(0,1fr) 56px;background:#f4f7fb;color:#253e5b}
+.reward-head{grid-column:1/3;grid-row:1;align-items:center;padding:17px 28px;border-bottom:1px solid #d8e2ee;background:#fff}
+.reward-head .eyebrow{color:#3977c6}.reward-head h2{margin:4px 0 3px;color:#1f3855;font-size:23px;letter-spacing:-.035em}.reward-head p{color:#647b95;font-size:12px}
+.reward-head>button{width:40px;height:40px;border:1px solid #cbd8e7;border-radius:8px;background:#f5f8fc;color:#526d8b}.reward-head>button:hover{border-color:#8eadd0;background:#eaf2fb;color:#2867b2}
+.reward-tabs{grid-column:1;grid-row:2/4;gap:7px;padding:15px 12px;overflow-y:auto;border-right:1px solid #d6e1ed;border-bottom:0;background:#edf3f9}
+.reward-tabs button{flex:0 0 auto;min-height:60px;padding:10px 12px;border:1px solid #d2deeb;border-radius:8px;background:#fff;color:#48627f;box-shadow:0 2px 7px #2a4b7110}
+.reward-tabs button:hover{border-color:#9cb8d7;background:#f7faff;color:#2f5f97}.reward-tabs button.active{border-color:#6f9fd4;background:#eaf3ff;color:#225fa7;box-shadow:inset 3px 0 #3478c9,0 3px 10px #24578918}
+.reward-tabs strong,.reward-tabs small{overflow:visible;text-overflow:clip;white-space:normal;line-height:1.25}.reward-tabs strong{font-size:14px}.reward-tabs small{margin-top:4px;color:#7188a1;font-size:11px}.reward-tabs button.active small{color:#567ca7}
+.reward-summary{grid-column:2;grid-row:2;align-items:center;padding:14px 25px;border-bottom:1px solid #dce5ef;background:#fff}.reward-summary span{color:#233d5a;font-size:20px}.reward-summary small{margin-top:4px;color:#71869e;font-size:11px}.reward-summary strong{padding:7px 10px;border:1px solid #e1d4ad;border-radius:999px;background:#fff9e8;color:#8a681c;font-size:12px}
+.reward-list{grid-column:2;grid-row:3;grid-template-columns:repeat(auto-fill,minmax(370px,1fr));gap:10px;padding:16px 20px 24px;background:#f4f7fb;scrollbar-color:#b9c8d9 #eef3f8}
+.reward-item{grid-template-columns:28px 46px minmax(0,1fr) auto auto;gap:10px;min-height:80px;padding:10px 14px;border:1px solid #dce5ef;border-radius:9px;background:#fff;color:#283f59;box-shadow:0 3px 12px #173a6210}
+.reward-item:hover{border-color:#8eb3dc;background:#f8fbff;box-shadow:0 7px 18px #214b791c}.reward-item:focus-visible{outline:2px solid #3478c9;outline-offset:1px}
+.reward-rank{color:#8498ad;font-size:12px}.reward-item:nth-child(-n+3) .reward-rank{color:#b47d13;font-size:13px}.reward-item .market-icon{width:42px;height:42px;border:1px solid #dbe5f0;border-radius:8px;background:#eef4fb}
+.reward-name-line{align-items:center}.reward-name strong{color:#243b55;font-size:15px;line-height:1.35}.reward-name small{margin-top:5px;color:#667e97;font-size:11px}
+.reward-tier{padding:4px 7px;border-radius:999px;font-size:10px;letter-spacing:-.02em}.tier-top{background:#ffe7eb;color:#b33d55}.tier-high{background:#fff1d3;color:#936616}.tier-main{background:#def5ee;color:#277b67}
+.reward-value{min-width:100px;text-align:right}.reward-value strong{display:block;color:#255d9b;font-size:17px;line-height:1.15}.reward-value small{margin-top:5px;color:#73879d;font-size:10px}
+.reward-price-whole,.reward-price-fraction{font-variant-numeric:tabular-nums}.reward-price-fraction{color:#8b98a8;font-size:.88em;font-weight:700}
+.reward-foot{grid-column:1/3;grid-row:4;padding:10px 24px;border-top:1px solid #d6e1ec;background:#fff;color:#6d8299;font-size:11px}.reward-foot button{min-height:36px;padding:8px 13px;border:1px solid #8fb1d5;border-radius:6px;background:#eaf3ff;color:#275f9f;font-size:11px}.reward-foot button:hover{background:#dcecff}
+
+@media(max-width:760px){
+  .reward-drawer{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto minmax(0,1fr) auto}
+  .reward-head{grid-column:1;grid-row:1;padding:12px 14px}.reward-head h2{font-size:20px}.reward-head p{display:block!important;max-width:300px;font-size:11px;line-height:1.35}.reward-head>button{width:36px;height:36px}
+  .reward-tabs{grid-column:1;grid-row:2;display:flex;flex-direction:row;gap:7px;padding:8px 10px;overflow-x:auto;overflow-y:hidden;border-right:0;border-bottom:1px solid #d6e1ed;scroll-snap-type:x proximity}
+  .reward-tabs button{flex:0 0 124px;min-height:58px;padding:8px 10px;scroll-snap-align:start}.reward-tabs strong{font-size:13px}.reward-tabs small{display:block!important;font-size:10px}
+  .reward-summary{grid-column:1;grid-row:3;padding:11px 14px}.reward-summary span{font-size:18px}.reward-summary small{font-size:10px}.reward-summary strong{padding:6px 8px;font-size:11px}
+  .reward-list{grid-column:1;grid-row:4;grid-template-columns:minmax(0,1fr);gap:8px;padding:9px 10px 16px}
+  .reward-item{grid-template-columns:22px 42px minmax(0,1fr) auto auto;gap:7px;min-height:82px;padding:9px 11px}.reward-item .market-icon{width:40px;height:40px}
+  .reward-name strong{font-size:14px}.reward-name small{margin-top:3px;font-size:10px}.reward-tier{display:inline-flex!important;padding:3px 6px;font-size:9px}
+  .reward-value{min-width:88px}.reward-value strong{font-size:16px}.reward-value small{font-size:10px}
+  .reward-foot{grid-column:1;grid-row:5;align-items:center;flex-direction:row;gap:8px;padding:8px 10px}.reward-foot>span{display:block!important;max-width:none;color:#6d8299;font-size:10px;line-height:1.35}.reward-foot button{min-height:34px;white-space:nowrap}
+}
+@media(max-width:430px){
+  .reward-head .eyebrow{font-size:9px}.reward-head h2{font-size:19px}.reward-head p{max-width:280px}
+  .reward-summary strong{font-size:10px}.reward-list{padding-inline:8px}.reward-item{grid-template-columns:20px 40px minmax(0,1fr) auto;grid-template-rows:auto auto;padding-inline:9px}.reward-rank,.reward-item .market-icon{grid-row:1/3}.reward-name{grid-column:3;grid-row:1}.reward-tier{grid-column:3;grid-row:2;justify-self:start}.reward-value{grid-column:4;grid-row:1/3;align-self:center;min-width:82px}.reward-value strong{font-size:15px}
+}
