@@ -220,6 +220,10 @@ def init_db():
         );
         CREATE INDEX IF NOT EXISTS cache_events_lookup
           ON cache_events (source, key, created_at);
+        CREATE TABLE IF NOT EXISTS market_display_order (
+          league TEXT NOT NULL, market_id TEXT NOT NULL, display_order INTEGER NOT NULL,
+          PRIMARY KEY (league, market_id)
+        );
         """)
         columns = {r["name"] for r in db.execute("PRAGMA table_info(fetch_state)")}
         if "attempted_at" not in columns:
@@ -310,7 +314,9 @@ def normalize(category: str, payload: dict, scout_items: dict | None = None):
     core = payload.get("core") or {}
     now = int(time.time())
     if category in EXCHANGE_TYPES:
-        items = {item["id"]: item for item in core.get("items", []) if "id" in item}
+        ordered_items = [item for item in core.get("items", []) if "id" in item]
+        items = {item["id"]: item for item in ordered_items}
+        item_order = {item["id"]: index for index, item in enumerate(ordered_items)}
         scout_items = scout_items or {}
         rows = []
         for line in payload.get("lines", []):
@@ -323,14 +329,16 @@ def normalize(category: str, payload: dict, scout_items: dict | None = None):
                          korean_name(item.get("name") or scout.get("Text") or readable_id(str(line["id"]))),
                          normalized_icon(item.get("image") or scout.get("IconUrl")),
                          None, price, line.get("volumePrimaryValue"), None,
-                         (line.get("sparkline") or {}).get("totalChange"), "exchange", now))
+                         (line.get("sparkline") or {}).get("totalChange"), "exchange", now,
+                         item_order.get(line["id"], len(item_order))))
         if category == "Currency":
             primary = core.get("primary")
             item = items.get(primary, {})
             if primary and not any(r[0] == f"exchange:Currency:{primary}" for r in rows):
                 rows.append((f"exchange:Currency:{primary}", category, CATEGORIES[category],
                              korean_name(item.get("name") or primary), normalized_icon(item.get("image")),
-                             None, 1.0, None, None, 0.0, "reference", now))
+                             None, 1.0, None, None, 0.0, "reference", now,
+                             item_order.get(primary, len(item_order))))
         return rows
     rows = []
     for line in payload.get("lines", []):
@@ -341,7 +349,7 @@ def normalize(category: str, payload: dict, scout_items: dict | None = None):
         rows.append((market_id, category, CATEGORIES[category], korean_name(line.get("name") or "Unknown"),
                      normalized_icon(line.get("icon")), korean_name(line.get("baseType")), price,
                      None, line.get("listingCount"),
-                     (line.get("sparkLine") or {}).get("totalChange"), "stash", now))
+                     (line.get("sparkLine") or {}).get("totalChange"), "stash", now, len(rows)))
     return rows
 
 
@@ -351,10 +359,12 @@ def save_markets(league: str, rows: list[tuple]):
         previous_ids = {item[0] for item in db.execute(
             "SELECT id FROM markets WHERE league=? AND category=?", (league, category))}
         current_ids = {row[0] for row in rows}
-        for row in rows:
+        for fallback_order, row in enumerate(rows):
+            market_row = row[:12]
+            display_order = row[12] if len(row) > 12 else fallback_order
             old = db.execute("SELECT price_divine, changed_at FROM markets WHERE league=? AND id=?",
                              (league, row[0])).fetchone()
-            changed_at = row[-1] if old is None or old["price_divine"] != row[6] else old["changed_at"]
+            changed_at = market_row[-1] if old is None or old["price_divine"] != row[6] else old["changed_at"]
             db.execute("""INSERT INTO markets VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 ON CONFLICT(league,id) DO UPDATE SET
                 category=excluded.category, category_label=excluded.category_label,
@@ -362,8 +372,13 @@ def save_markets(league: str, rows: list[tuple]):
                 price_divine=excluded.price_divine, volume_divine=excluded.volume_divine,
                 listing_count=excluded.listing_count, trend_percent=excluded.trend_percent,
                 source_kind=excluded.source_kind, observed_at=excluded.observed_at,
-                changed_at=excluded.changed_at""", (league, *row, changed_at))
+                changed_at=excluded.changed_at""", (league, *market_row, changed_at))
+            db.execute("""INSERT INTO market_display_order VALUES (?,?,?)
+                ON CONFLICT(league,market_id) DO UPDATE SET display_order=excluded.display_order""",
+                (league, row[0], display_order))
         db.executemany("DELETE FROM markets WHERE league=? AND id=?",
+                       ((league, stale_id) for stale_id in previous_ids - current_ids))
+        db.executemany("DELETE FROM market_display_order WHERE league=? AND market_id=?",
                        ((league, stale_id) for stale_id in previous_ids - current_ids))
 
 
@@ -941,8 +956,10 @@ async def markets(league: str = Query(min_length=1)):
         await collector.refresh(league, force=True, min_interval=0)
     now = int(time.time())
     with connect() as db:
-        items = [dict(row) for row in db.execute(
-            "SELECT * FROM markets WHERE league=? ORDER BY price_divine DESC", (league,))]
+        items = [dict(row) for row in db.execute("""SELECT m.*,COALESCE(o.display_order,999999) AS display_order
+            FROM markets m LEFT JOIN market_display_order o
+              ON o.league=m.league AND o.market_id=m.id
+            WHERE m.league=? ORDER BY m.category,display_order,m.id""", (league,))]
         states = [dict(row) for row in db.execute(
             "SELECT category,fetched_at,attempted_at,error,etag,last_modified FROM fetch_state WHERE league=?",
             (league,))]
