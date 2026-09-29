@@ -13,6 +13,27 @@ import app
 
 
 class SeasonalityTests(unittest.TestCase):
+    def test_unlisted_item_leaves_current_market_without_erasing_history(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(app, "DB_PATH", Path(directory) / "prices.sqlite3"):
+            app.init_db()
+            now = int(time.time())
+            def row(market_id):
+                return (market_id, "Currency", "화폐", market_id, None, None,
+                        1.0, None, None, None, "exchange", now)
+            app.save_markets("Test", [row("kept"), row("removed")])
+            with app.connect() as db:
+                db.execute("""INSERT INTO market_snapshots VALUES
+                    ('Test','removed',?,1,1,?)""", (now, now))
+            db.close()
+            app.save_markets("Test", [row("kept")])
+            with app.connect() as db:
+                current = [item[0] for item in db.execute("SELECT id FROM markets")]
+                history = db.execute("SELECT COUNT(*) FROM market_snapshots WHERE market_id='removed'").fetchone()[0]
+            db.close()
+            self.assertEqual(current, ["kept"])
+            self.assertEqual(history, 1)
+            gc.collect()
+
     def test_full_market_snapshot_is_idempotent_and_requires_fresh_source(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(app, "DB_PATH", Path(directory) / "prices.sqlite3"):
             app.init_db()
