@@ -76,6 +76,19 @@ cd frontend
 npm run dev
 ```
 
+## 외부에서 개인용 HTTPS 주소로 보기
+
+우분투에 연결된 Tailscale의 Serve를 사용하면 별도 도메인이나 Vercel 없이 `https://<우분투-기기명>.<tailnet>.ts.net` 주소에서 화면과 API를 함께 볼 수 있습니다. 접근하는 PC·휴대폰도 같은 Tailscale 계정의 tailnet에 연결되어야 합니다. 이 주소는 일반 공개 웹 주소가 아닙니다.
+
+로컬에서 `frontend`의 `npm run build` 결과물을 우분투의 `~/POE2-Exchange/frontend/dist`로 복사한 뒤, 우분투 백엔드를 재시작하고 다음을 실행합니다.
+
+```bash
+tailscale serve --bg 18080
+tailscale serve status
+```
+
+화면의 API 요청은 같은 주소의 `/api`로 전달되고 가격 수집은 우분투 백엔드가 계속 수행합니다. 프런트엔드 변경을 배포할 때는 다시 빌드·복사한 뒤 백엔드를 재시작합니다. 공개 인터넷 주소가 필요한 경우에는 Tailscale Funnel이나 Cloudflare Tunnel과 별도의 접근 제어를 설정해야 합니다.
+
 ## API
 
 - `GET /api/leagues`

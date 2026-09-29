@@ -20,6 +20,7 @@ from zoneinfo import ZoneInfo
 import httpx
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 BASE = "https://poe.ninja/poe2/api/economy"
 EXCHANGE_TYPES = {
@@ -1102,3 +1103,8 @@ async def scout_reference(market_id: str, league: str = Query(min_length=1)):
         return result
     except (httpx.HTTPError, ValueError, KeyError) as exc:
         raise HTTPException(502, f"Scout reference unavailable: {exc}") from exc
+
+
+FRONTEND_DIST = ROOT / "frontend" / "dist"
+if (FRONTEND_DIST / "index.html").is_file():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="dashboard")
