@@ -13,8 +13,11 @@
 .market-window .exchange-search,.market-window .reward-search{box-sizing:border-box;height:42px}
 .market-window .exchange-foot>button,.market-window .reward-foot>button{box-sizing:border-box;min-height:38px;padding:9px 16px;font-size:12px;line-height:18px}
 .market-window .exchange-item-grid .exchange-item{box-sizing:border-box;height:62px;min-height:62px}
+.market-window.exchange-overlay .exchange-items,.market-window.reward-drawer .reward-list{display:block;box-sizing:border-box;min-width:0;padding:30px 32px 34px;overflow-y:auto;scrollbar-width:thin;scrollbar-gutter:stable}
+@media(max-width:900px){.market-window.exchange-overlay .exchange-items,.market-window.reward-drawer .reward-list{padding:22px 14px 20px}}
 @media(max-width:900px){.market-window{--market-nav-width:150px}}
 @media(max-width:760px){
+  .market-window.exchange-overlay .exchange-items,.market-window.reward-drawer .reward-list{padding:10px 10px 18px}
   .market-window.exchange-overlay .exchange-body{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
   .market-window.reward-drawer{grid-template-columns:minmax(0,1fr)}
   .market-window .exchange-nav{display:flex;flex-direction:row;gap:6px;padding:8px 10px;overflow-x:auto;overflow-y:hidden;scrollbar-gutter:auto;border-right:0;border-bottom:1px solid #514b3f}
