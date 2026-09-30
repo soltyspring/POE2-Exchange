@@ -134,12 +134,12 @@
 .exchange-overlay .exchange-nav button{min-height:46px;margin-bottom:7px;padding:9px 14px;border-radius:4px;font-size:13.5px}
 .exchange-overlay .exchange-nav small{font-size:11px}
 .exchange-overlay .exchange-items{padding:30px 32px 34px;background:radial-gradient(circle at 50% 0,#383936 0,#2a2c2d 42%,#242628 100%)}
-.exchange-overlay .exchange-group{width:min(100%,1224px);margin:0 auto 40px}
+.exchange-overlay .exchange-group{width:min(100%,2060px);margin:0 auto 40px}
 .exchange-overlay .exchange-group h3{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 20px;padding:10px 0 16px;border-bottom:1px solid #666054;font-size:21px;line-height:1.2;letter-spacing:.025em;color:#f0ddb0;text-shadow:0 1px 8px #0008}
 .exchange-overlay .exchange-group h3 small{padding:3px 7px;border:1px solid #605a4e;border-radius:10px;color:#9f9888;font-size:10px;font-weight:600;text-shadow:none}
 .exchange-overlay .exchange-group:first-child h3{margin-top:0}
 .exchange-overlay .exchange-blocks{display:flex;flex-direction:column;gap:30px}
-.exchange-overlay .exchange-grid{display:grid;grid-template-columns:repeat(3,minmax(0,400px));gap:8px 12px;position:relative;justify-content:center}
+.exchange-overlay .exchange-grid{display:grid;grid-template-columns:repeat(5,minmax(0,400px));gap:8px 12px;position:relative;justify-content:center}
 .exchange-overlay .exchange-grid+.exchange-grid:before{content:'';position:absolute;left:8%;right:8%;top:-16px;border-top:1px solid #464742}
 .exchange-overlay .exchange-item{height:58px;gap:11px;padding:7px 12px;border:1px solid #18191a;border-radius:4px;background:linear-gradient(100deg,#181a1b,#111314);box-shadow:0 2px 7px #0004}
 .exchange-overlay .exchange-item:hover{transform:translateY(-1px);border-color:#a88b49;box-shadow:0 5px 13px #0007}.exchange-overlay .exchange-item.selected{border-color:#c4a158;box-shadow:inset 3px 0 #c4a158,0 4px 12px #0006}
