@@ -1,0 +1,24 @@
+/* Shared dimensions for both market windows, loaded after their older styles. */
+.market-window{--market-nav-width:232px;--market-button-height:46px}
+.market-window.exchange-overlay .exchange-body,.market-window.reward-drawer{grid-template-columns:var(--market-nav-width) minmax(0,1fr)}
+.market-window .exchange-nav{padding:32px 14px 18px;border-right:1px solid #514b3f}
+.market-window .exchange-nav button{box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;flex:none;gap:8px;width:100%;height:var(--market-button-height);min-height:var(--market-button-height);margin:0 0 7px;padding:9px 14px;border:1px solid #4b473f;border-radius:4px;font-size:13.5px;font-weight:700}
+.market-window .exchange-nav button strong{font-size:13.5px;line-height:1.25}
+.market-window .exchange-nav button small{min-width:0;margin:0;font-size:11px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.market-window .exchange-unit,.market-window .exchange-sort{box-sizing:border-box;display:flex;align-items:center;flex:none;height:42px;padding:3px;border:1px solid #625c4f}
+.market-window .exchange-unit button,.market-window .exchange-sort button{box-sizing:border-box;flex:none;width:64px;min-width:64px;height:34px;min-height:34px;margin:0;padding:0 8px;border:0;font-size:12px;font-weight:700;line-height:1}
+.market-window .reward-category-menu .market-category-trigger{height:42px;font-size:12px}
+.market-window .reward-category-menu .market-category-options{top:47px}
+.market-window .exchange-close,.market-window .reward-head>button{box-sizing:border-box;flex:none;width:38px;min-width:38px;height:38px;padding:0;border-radius:0}
+.market-window .exchange-search,.market-window .reward-search{box-sizing:border-box;height:42px}
+.market-window .exchange-foot>button,.market-window .reward-foot>button{box-sizing:border-box;min-height:38px;padding:9px 16px;font-size:12px;line-height:18px}
+.market-window .exchange-item-grid .exchange-item{box-sizing:border-box;height:62px;min-height:62px}
+@media(max-width:900px){.market-window{--market-nav-width:150px}}
+@media(max-width:760px){
+  .market-window.exchange-overlay .exchange-body{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  .market-window.reward-drawer{grid-template-columns:minmax(0,1fr)}
+  .market-window .exchange-nav{display:flex;flex-direction:row;gap:6px;padding:8px 10px;overflow-x:auto;overflow-y:hidden;border-right:0;border-bottom:1px solid #514b3f}
+  .market-window .exchange-nav-label{display:none}
+  .market-window .exchange-nav button{flex:0 0 124px;width:124px;height:46px;min-height:46px;margin:0;padding:8px 10px;gap:6px}
+  .market-window .exchange-nav button small{display:block!important;font-size:11px}
+}
