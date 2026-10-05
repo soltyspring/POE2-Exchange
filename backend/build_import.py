@@ -76,7 +76,7 @@ def analyze_document(document: dict) -> dict:
             if not common:
                 return
             items.append({'slot': slot, 'slot_label': label, 'name': common.get('name') or common.get('slug') or '이름 미제공',
-                          'unique': bool(common.get('isUnique')), 'item_class': common.get('itemClassSlug'),
+                          'unique': bool(common.get('isUnique')), 'item_class': common.get('itemClassSlug'), 'icon': common.get('iconURL'),
                           'explicit': _list(common.get('explicitDescriptions')), 'implicit': _list(common.get('implicitDescriptions')),
                           'stats': _list(common.get('stats')), 'requirements': _list(common.get('requirements')),
                           'runes': _list(value.get('runes')), 'anointment': (value.get('anointment') or {}).get('slug')})
@@ -87,13 +87,15 @@ def analyze_document(document: dict) -> dict:
             for set_id in ['set1', 'set2']:
                 add_item(f'{slot}.{set_id}', f'{label} · 세트 {set_id[-1]}', (equipment.get(slot) or {}).get(set_id))
         skills = variant.get('skillGems') or {}
+        priority_names = {gem.get('gemSlug'): gem.get('name') for gem in _list(skills.get('priorityGems'))}
         gems = []
         for gem in _list(skills.get('gems')):
             active = gem.get('activeSkill') or {}
             if active:
                 gems.append({'name': active.get('name') or active.get('gemSlug') or '이름 미제공',
-                             'slug': active.get('gemSlug'), 'level': active.get('level'), 'weapon_set': gem.get('weaponSet'),
-                             'supports': _list(gem.get('subSkills'))})
+                             'slug': active.get('gemSlug'), 'icon': active.get('iconURL') or active.get('gemIconURL'),
+                             'level': active.get('level'), 'weapon_set': gem.get('weaponSet'),
+                             'supports': [{**support, 'name': priority_names.get(support.get('gemSlug'))} for support in _list(gem.get('subSkills'))]})
         passive = variant.get('passiveTree') or {}
         tree = {key: list(dict.fromkeys(_list((passive.get(key) or {}).get('selectedSlugs'))))
                 for key in ['mainTree', 'set1Tree', 'set2Tree', 'ascendancyTree']}
@@ -102,7 +104,8 @@ def analyze_document(document: dict) -> dict:
         populated = bool(items or gems or any(tree.values()) or any(atlas.values()))
         variants.append({'id': variant.get('id') or f'variant-{index}', 'name': labels.get(variant.get('id')) or f'구성 {index + 1}',
                          'populated': populated, 'equipment': items, 'skills': gems, 'gem_requirements': skills.get('gemRequirements'),
-                         'passives': tree, 'jewels': _list(passive.get('jewels')), 'atlas': atlas,
+                         'passives': tree, 'passive_priority': {key: _list((passive.get(key) or {}).get('priorityList')) for key in ['mainTree', 'ascendancyTree']},
+                         'jewels': _list(passive.get('jewels')), 'atlas': atlas,
                          'counts': {'equipment': len(items), 'unique': sum(item['unique'] for item in items),
                                     'skills': len(gems), 'supports': sum(len(g['supports']) for g in gems),
                                     'passives': len(tree['mainTree']), 'ascendancy': len(tree['ascendancyTree']),

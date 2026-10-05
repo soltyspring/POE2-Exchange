@@ -1,5 +1,13 @@
 # Local product validation
 
+## 2026-10-05 build presentation update
+
+- Added inventory slot layout, weapon set switching, selected item options, gem icons and supports, and download/table of contents sidebar.
+- Latest variant projection remains in use for the display and every export.
+- Local checks: frontend build, 11 frontend tests and 6 build importer backend tests passed. Browser verified real equipment icons, set 2 selection and 390px viewport without horizontal overflow.
+- Passive nodes are shown as priorities and lists; the API projection does not provide graph coordinates or edges.
+- This update follows the user's deployment authorization. Earlier local-only notes below describe the prior review stage.
+
 Review date: 2026-10-03. All changes remain in the local working tree.
 
 ## Scope and isolation

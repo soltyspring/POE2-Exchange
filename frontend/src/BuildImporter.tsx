@@ -1,17 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { ArrowDownToLine, ArrowLeft, Check, ExternalLink, FileJson, Layers3, Link2, LoaderCircle, ShieldCheck, X } from 'lucide-react'
 import { request } from './apiClient'
+import { BuildPresentation } from './BuildPresentation'
 import { buildFilename, buildMarkdown, EXAMPLE_BUILD, isBuildLink, lastVariantBuild, type ImportedBuild } from './buildExport'
-
-const treeLabels: Record<string, string> = {mainTree: '기본 패시브', set1Tree: '무기 세트 1', set2Tree: '무기 세트 2', ascendancyTree: '전직',
-  breachTree: '균열', expeditionTree: '탐험', deliriumTree: '환영', ritualTree: '의식', bossTree: '보스', pinnacleBossTree: '최종 보스', abyssalTree: '심연'}
 
 export function BuildImporter() {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<ImportedBuild | null>(null)
-  const [section, setSection] = useState<'equipment' | 'skills' | 'passives' | 'atlas'>('equipment')
   const [toast, setToast] = useState('')
   const pending = useRef<AbortController | null>(null)
   const errorRef = useRef<HTMLDivElement>(null)
@@ -34,7 +31,7 @@ export function BuildImporter() {
       if (!response.ok) throw new Error(typeof body.detail === 'string' ? body.detail : '빌드를 가져오지 못했습니다. 링크를 확인해 주세요.')
       if (controller.signal.aborted) return
       const build = lastVariantBuild(body as ImportedBuild)
-      setResult(build); setSection('equipment')
+      setResult(build)
       requestAnimationFrame(() => resultRef.current?.focus())
     } catch (failure) {
       if (!controller.signal.aborted) {
@@ -63,18 +60,14 @@ export function BuildImporter() {
         {error && <div className="build-error" role="alert" tabIndex={-1} ref={errorRef}>{error}</div>}
       </form>
       {!result && !loading && <div className="build-how"><div><FileJson size={22}/><h2>빌드 JSON</h2><p>장비 옵션, 젬 연결, 패시브 노드 등 조회된 구조 데이터를 저장합니다.</p></div><div><Layers3 size={22}/><h2>마지막 구성 확인</h2><p>공유 빌드의 구성 목록에서 마지막 버전만 가져와 표시합니다.</p></div><div><ArrowDownToLine size={22}/><h2>분석 요약</h2><p>마지막 구성의 데이터를 JSON과 읽기 쉬운 Markdown 파일로 저장합니다.</p></div></div>}
-      {result && <section className="build-result" aria-label="빌드 분석 결과" tabIndex={-1} ref={resultRef}><div className="build-result-head"><div><span className="build-eyebrow">가져오기 완료</span><h2>{result.analysis.name}</h2><p>{result.analysis.author} · 마지막 구성 <a href={result.source_url} target="_blank" rel="noopener noreferrer">원문 보기 <ExternalLink size={13}/></a></p></div><div className="build-downloads"><button className="build-primary" onClick={() => download('build')}><FileJson size={16}/>빌드 JSON</button><button disabled={!variant} onClick={() => download('markdown')}><ArrowDownToLine size={16}/>마지막 구성 요약</button><button onClick={() => download('analysis')}>분석 JSON</button></div></div>
-        <div className="build-source"><ShieldCheck size={15}/><span>조회 {new Date(result.fetched_at).toLocaleString('ko-KR')} · {result.cached ? '5분 캐시 사용' : 'Mobalytics에서 조회'} · 시세 DB에 저장하지 않습니다.</span></div>
-        {variant && <div className="build-variant">마지막 구성 <strong>{variant.name}</strong><span>공유 페이지의 마지막 버전 기준</span></div>}
-        {variant ? <><div className="build-counts">{([['장비', variant.counts.equipment], ['고유 장비', variant.counts.unique], ['주요 스킬', variant.counts.skills], ['보조·하위 스킬', variant.counts.supports], ['기본 노드', variant.counts.passives], ['전직 노드', variant.counts.ascendancy]] as const).map(([label, count]) => <div key={label}><span>{label}</span><strong>{count}</strong></div>)}</div>
-          <nav className="build-sections" aria-label="빌드 세부 정보">{([['equipment','장비'],['skills','젬·스킬'],['passives','패시브·주얼'],['atlas','아틀라스']] as const).map(([id,label]) => <button key={id} aria-pressed={section === id} className={section === id ? 'active' : ''} onClick={() => setSection(id)}>{label}</button>)}</nav>
-          {!variant.populated && <p className="build-empty">이 구성에는 저장된 장비·젬·노드가 없습니다. 공유 페이지의 마지막 구성 내용을 확인해 주세요.</p>}
-          {section === 'equipment' && <div className="build-cards">{variant.equipment.map(item => <article key={item.slot} className="build-card"><div className="build-card-label"><span>{item.slot_label}</span>{item.unique && <small>고유</small>}</div><h3>{item.name}</h3>{item.item_class && <p className="build-slug">{item.item_class}</p>}<ul>{item.implicit.map((mod,index) => <li className="build-implicit" key={`i${index}`}>{mod.description}</li>)}{item.explicit.map((mod,index) => <li key={`e${index}`}>{mod.description}{mod.mustHave && <small> · 필수 옵션</small>}</li>)}</ul>{!item.explicit.length && !item.implicit.length && <p className="build-muted">옵션 설명 미제공</p>}{item.runes.length > 0 && <p className="build-muted">룬 · {item.runes.map(rune => rune.slug).join(', ')}</p>}{item.anointment && <p className="build-muted">주입 · {item.anointment}</p>}<details><summary>능력치·요구사항</summary><ul>{[...item.stats,...item.requirements].map((stat,index) => <li key={index}>{stat.name}: {stat.value}</li>)}</ul></details></article>)}</div>}
-          {section === 'skills' && <><p className="build-muted">젬 요구 능력치: {variant.gem_requirements ? `힘 ${variant.gem_requirements.str} · 민첩 ${variant.gem_requirements.dex} · 지능 ${variant.gem_requirements.int}` : '미제공'}</p><div className="build-cards">{variant.skills.map((skill,index) => <article className="build-card" key={`${skill.slug}:${index}`}><h3>{skill.name}</h3><p className="build-muted">{skill.level != null ? `Lv.${skill.level}` : '레벨 미제공'}{skill.weapon_set ? ` · ${skill.weapon_set}` : ''}</p><ul>{skill.supports.map((support,i) => <li key={i}>{support.gemSlug}{support.gemType && <small> · {support.gemType}</small>}</li>)}</ul>{!skill.supports.length && <p className="build-muted">연결된 보조·하위 스킬 없음</p>}</article>)}</div></>}
-          {section === 'passives' && <div className="build-trees">{Object.entries(variant.passives).map(([key,nodes]) => <details key={key} open={key === 'ascendancyTree'}><summary>{treeLabels[key] || key} <span>{nodes.length}개</span></summary>{nodes.length ? <ul className="build-node-list">{nodes.map(node => <li key={node}>{node}</li>)}</ul> : <p className="build-muted">저장된 노드 없음</p>}</details>)}<details open><summary>주얼 <span>{variant.jewels.length}개</span></summary>{variant.jewels.length ? <ul>{variant.jewels.map((jewel,index) => <li key={index}>{jewel.jewelSlug} · 위치 {jewel.nodeSlug}</li>)}</ul> : <p className="build-muted">저장된 주얼 없음</p>}</details></div>}
-          {section === 'atlas' && <div className="build-trees">{Object.entries(variant.atlas).filter(([,nodes]) => nodes.length).map(([key,nodes]) => <details open key={key}><summary>{treeLabels[key] || key} <span>{nodes.length}개</span></summary><ul className="build-node-list">{nodes.map(node => <li key={node}>{node}</li>)}</ul></details>)}{!variant.counts.atlas && <p className="build-empty">이 구성에는 아틀라스 노드가 저장되어 있지 않습니다.</p>}</div>}
-        </> : <p className="build-empty">선택 가능한 빌드 구성이 없습니다. 조회된 JSON은 다운로드할 수 있습니다.</p>}
-        <div className="build-notes"><strong>분석 범위</strong><ul>{result.analysis.notes.map(note => <li key={note}>{note}</li>)}</ul><p>빌드 JSON에는 마지막 구성과 {result.analysis.has_pob ? '저장된 PoB 코드' : '장비·젬·패시브 데이터'}가 포함됩니다. ChatGPT에 첨부해 추가 분석할 수 있습니다.</p></div>
+      {result && <section className="build-result planner-result" aria-label="빌드 분석 결과" tabIndex={-1} ref={resultRef}>
+        <div className="planner-layout"><div className="planner-main-column"><div className="planner-hero"><span className="build-eyebrow">POE2 · BUILD</span><h2>{result.analysis.name}</h2><div className="planner-hero-tags"><span>마지막 구성</span>{variant && <span>{variant.name}</span>}<span>{variant?.counts.skills || 0}개 스킬</span></div><p>작성자 <strong>{result.analysis.author}</strong><a href={result.source_url} target="_blank" rel="noopener noreferrer">Mobalytics 원문 <ExternalLink size={13}/></a></p><div className="planner-hero-foot"><ShieldCheck size={15}/><span>조회 {new Date(result.fetched_at).toLocaleString('ko-KR')} · {result.cached ? '5분 캐시 사용' : 'Mobalytics에서 조회'}</span></div></div>
+          {variant ? <BuildPresentation key={variant.id} variant={variant}/> : <p className="build-empty">저장된 빌드 구성이 없습니다.</p>}
+          <details id="build-notes" className="build-notes"><summary>분석 범위와 다운로드 안내</summary><ul>{result.analysis.notes.map(note => <li key={note}>{note}</li>)}</ul><p>마지막 구성의 장비·젬·노드 데이터를 파일로 저장합니다. DPS 계산과 게임으로 직접 가져오는 기능은 아닙니다.</p></details>
+        </div><aside className="planner-sidebar" aria-label="빌드 도구"><section className="planner-panel planner-export"><header><h2>빌드 내보내기</h2></header><p>마지막 구성만 파일로 저장합니다.</p><div className="build-downloads"><button className="build-primary" onClick={() => download('build')}><FileJson size={16}/>빌드 JSON 다운로드</button><button disabled={!variant} onClick={() => download('markdown')}><ArrowDownToLine size={16}/>마지막 구성 요약</button><button onClick={() => download('analysis')}>분석 JSON</button></div><small>추가 분석용 JSON · 읽기용 Markdown</small></section>
+          <nav className="planner-panel planner-toc" aria-label="빌드 목차"><header><h2>목차</h2></header><a href="#build-equipment">01 <span>장비</span></a><a href="#build-skills">02 <span>젬·스킬</span></a><a href="#build-passives">03 <span>패시브·주얼</span></a><a href="#build-atlas">04 <span>아틀라스</span></a><a href="#build-notes">05 <span>분석 범위</span></a><a className="planner-back-top" href="#build-main">맨 위로 ↑</a></nav>
+          <div className="planner-panel planner-quick-summary"><header><h2>마지막 구성 요약</h2></header>{variant && <dl><div><dt>장비 <small>무기 세트 포함</small></dt><dd>{variant.counts.equipment}</dd></div><div><dt>고유 장비</dt><dd>{variant.counts.unique}</dd></div><div><dt>스킬</dt><dd>{variant.counts.skills}</dd></div><div><dt>보조·하위 스킬</dt><dd>{variant.counts.supports}</dd></div><div><dt>기본 노드</dt><dd>{variant.counts.passives}</dd></div><div><dt>전직 노드</dt><dd>{variant.counts.ascendancy}</dd></div></dl>}<p>아이템을 눌러 옵션을 확인하세요. 무기 세트를 바꿔 다른 무기를 비교할 수 있습니다.</p></div>
+        </aside></div>
       </section>}
       <footer className="build-footer"><a href="/">시세 대시보드</a><a href="/privacy.html">개인정보 처리방침</a><span>Mobalytics·Grinding Gear Games와 제휴하지 않은 도구입니다.</span></footer>
     </main>{toast && <div className="build-toast" role="status"><Check size={16}/>{toast}</div>}

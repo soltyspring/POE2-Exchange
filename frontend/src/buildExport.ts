@@ -1,13 +1,14 @@
-export type Equipment = {slot: string; slot_label: string; name: string; unique: boolean; item_class: string | null;
+export type Equipment = {slot: string; slot_label: string; name: string; icon?: string | null; unique: boolean; item_class: string | null;
   explicit: {description: string; mustHave?: boolean}[]; implicit: {description: string}[];
   stats: {name: string; value: string | number}[]; requirements: {name: string; value: string | number}[];
   runes: {slug: string}[]; anointment: string | null}
-export type Skill = {name: string; slug: string; level: number | null; weapon_set: string | null;
-  supports: {gemSlug: string; gemType?: string}[]}
+export type Skill = {name: string; slug: string; icon?: string | null; level: number | null; weapon_set: string | null;
+  supports: {gemSlug: string; gemType?: string; name?: string; iconURL?: string}[]}
 export type BuildVariant = {id: string; name: string; populated: boolean; equipment: Equipment[]; skills: Skill[];
   gem_requirements: {dex: number; str: number; int: number} | null;
   passives: Record<string, string[]>; atlas: Record<string, string[]>;
-  jewels: {jewelSlug: string; nodeSlug: string; isUnique: boolean}[];
+  passive_priority?: Record<string, {slug: string; name: string; iconURL?: string; description?: string}[]>;
+  jewels: {jewelSlug: string; nodeSlug: string; isUnique: boolean; iconURL?: string}[];
   counts: {equipment: number; unique: number; skills: number; supports: number; passives: number; ascendancy: number; jewels: number; atlas: number}}
 export type ImportedBuild = {build_id: string; fetched_at: string; cached: boolean; cache_seconds: number; source_url: string;
   document: Record<string, unknown>; analysis: {name: string; author: string; updated_at: string | number | null;
