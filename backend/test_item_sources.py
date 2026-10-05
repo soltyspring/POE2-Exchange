@@ -6,10 +6,15 @@ from pathlib import Path
 from unittest.mock import patch
 
 import app
-from item_sources import InspectItem, inspect_item, save_catalog, combined_catalog
+from item_sources import InspectItem, inspect_item, save_catalog, combined_catalog, timestamp
 
 
 class ItemSourceTests(unittest.TestCase):
+    def test_dotnet_observation_timestamp(self):
+        self.assertEqual(timestamp('2026-09-19T13:14:45.1738630Z'),
+                         timestamp('2026-09-19T13:14:45.173863Z'))
+        self.assertIsNotNone(timestamp('2026-09-19T13:14:45.1738630Z'))
+
     def test_rare_name_and_modifiers_are_separate(self):
         item = inspect_item(InspectItem(league='Forbidden Rites', text=
             '아이템 종류: 장갑\r\n희귀도: 희귀\r\n슬픔의 발\r\n사이렌 장갑\r\n--------\r\n에너지 보호막: 120\r\n--------\r\n아이템 레벨: 80\r\n--------\r\n최대 생명력 +100\r\n화염 저항 +30%'))

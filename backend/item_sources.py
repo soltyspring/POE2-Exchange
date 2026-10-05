@@ -49,7 +49,9 @@ def init_source_tables(db):
 
 def timestamp(value):
     try:
-        return int(datetime.fromisoformat(value.replace('Z', '+00:00')).timestamp())
+        # .NET emits seven fractional digits; Ubuntu Python 3.10 accepts six.
+        value = re.sub(r'(\.\d{6})\d+', r'\1', value.replace('Z', '+00:00'))
+        return int(datetime.fromisoformat(value).timestamp())
     except (TypeError, ValueError, AttributeError):
         return None
 
