@@ -16,7 +16,7 @@ button:disabled { opacity: .45; }
 .app-shell .brand strong span { color: var(--muted); }
 .app-shell .side-section-label, .app-shell .sidebar-bottom p { color: var(--quiet); }
 .app-shell .side-link { height: 44px; color: var(--muted); font-size: 13px; }
-.app-shell .side-link.active { background: var(--accent-soft); color: #cce0ff; box-shadow: none; }
+.app-shell .side-link.active { background: var(--accent-soft); color: var(--accent); box-shadow: none; }
 .app-shell .side-link:hover { background: var(--surface-hover); color: var(--text); }
 .app-shell .side-count { color: var(--muted); }
 .app-shell .side-quick { border-color: var(--line); }
@@ -76,7 +76,7 @@ button:disabled { opacity: .45; }
 .app-shell .down { color: var(--accent); }
 .app-shell .chart-toolbar { border-color: var(--line); }
 .app-shell .intervals button, .app-shell .units button { color: var(--muted); min-height: 36px; min-width: 46px; font-size: 12px; border-radius: 5px; background: transparent; }
-.app-shell .intervals button.active, .app-shell .units button.active { color: #cce0ff; background: var(--accent-soft); }
+.app-shell .intervals button.active, .app-shell .units button.active { color: var(--accent); background: var(--accent-soft); }
 .app-shell .units { border-color: var(--line); }
 .app-shell .chart-wrap { min-height: 340px; margin-top: 10px; }
 .app-shell .chart-legend { color: var(--muted); background: var(--surface); border-color: var(--line); }
@@ -124,7 +124,7 @@ button:disabled { opacity: .45; }
 .app-shell .market-category-options { background: var(--surface-raised); border-color: var(--line); }
 .app-shell .market-category-options button { min-height: 38px; background: transparent; color: var(--muted); }
 .app-shell .market-category-options button:hover { background: var(--surface-hover); color: var(--text); }
-.app-shell .market-category-options button.selected { background: var(--accent-soft); color: #cce0ff; }
+.app-shell .market-category-options button.selected { background: var(--accent-soft); color: var(--accent); }
 .app-shell .market-list-units { margin-left: auto; background: var(--canvas); border-color: var(--line); }
 .app-shell .market-list-units button { color: var(--muted); }
 .app-shell .market-list-units button.active { color: var(--accent); background: var(--accent-soft); box-shadow: none; }
@@ -204,7 +204,7 @@ button:disabled { opacity: .45; }
 .app-shell .market-window .exchange-nav { background: var(--surface); border-color: var(--line); }
 .app-shell .market-window .exchange-nav-label { color: var(--quiet); }
 .app-shell .market-window .exchange-nav button { background: var(--surface-raised); color: var(--muted); border-color: var(--line); box-shadow: none; }
-.app-shell .market-window .exchange-nav button.active { background: var(--accent-soft); border-color: var(--line); color: #d5e6ff; }
+.app-shell .market-window .exchange-nav button.active { background: var(--accent-soft); border-color: var(--line); color: var(--accent); }
 .app-shell .market-window .exchange-nav button:hover { background: var(--surface-hover); color: var(--text); }
 .app-shell .market-window .exchange-nav button strong { color: inherit; }
 .app-shell .market-window .exchange-nav button small { color: var(--quiet); }
@@ -216,7 +216,7 @@ button:disabled { opacity: .45; }
 .app-shell .market-window .reward-summary-actions { flex-wrap: wrap; }
 .app-shell .market-window .exchange-unit, .app-shell .market-window .exchange-sort { background: var(--canvas); border-color: var(--line); border-radius: 5px; }
 .app-shell .market-window .exchange-unit button, .app-shell .market-window .exchange-sort button { color: var(--muted); background: transparent; border-radius: 3px; }
-.app-shell .market-window .exchange-unit button.active, .app-shell .market-window .exchange-sort button.active { color: #d5e6ff; background: var(--accent-soft); box-shadow: none; }
+.app-shell .market-window .exchange-unit button.active, .app-shell .market-window .exchange-sort button.active { color: var(--accent); background: var(--accent-soft); box-shadow: none; }
 .app-shell .market-window .exchange-search, .app-shell .market-window .reward-search { color: var(--muted); border-color: var(--line); background: var(--canvas); border-radius: 5px; }
 .app-shell .market-window .exchange-search input, .app-shell .market-window .reward-search input { color: var(--text); background: transparent; }
 .app-shell .market-window .exchange-search input::placeholder, .app-shell .market-window .reward-search input::placeholder { color: var(--quiet); }
@@ -248,7 +248,7 @@ button:disabled { opacity: .45; }
 .app-shell .exchange-item-grid.exchange-item-grid .exchange-item:focus-visible { outline-color: var(--selection-line); }
 .app-shell .market-window .exchange-foot, .app-shell .market-window .reward-foot { background: var(--surface); border-color: var(--line); color: var(--muted); }
 .app-shell .market-window .exchange-foot span, .app-shell .market-window .reward-foot span { color: var(--muted); }
-.app-shell .market-window .exchange-foot > button, .app-shell .market-window .reward-foot > button { background: var(--accent-soft); color: #d5e6ff; border: 1px solid var(--line); border-radius: 5px; }
+.app-shell .market-window .exchange-foot > button, .app-shell .market-window .reward-foot > button { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--line); border-radius: 5px; }
 .app-shell .market-window .exchange-empty, .app-shell .market-window .reward-empty { color: var(--muted); }
 
 .learning-panel { margin-top: 22px; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); padding: 24px; }

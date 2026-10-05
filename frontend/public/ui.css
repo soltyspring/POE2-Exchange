@@ -4,7 +4,7 @@
 .ui-button:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--line-strong); }
 .ui-button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
 .app-shell .sidebar { background: var(--canvas); }
-.app-shell .brand-mark { background: var(--focus-ring); }
+.app-shell .brand-mark { background: var(--action-filled); }
 .app-shell .side-link.active { background: var(--accent-soft); border: 1px solid var(--line-strong); box-shadow: inset 2px 0 var(--selection-line); }
 .app-shell .summary-card.primary { background: var(--action-surface); border-color: var(--focus-ring); }
 .build-page .build-primary { background: var(--action-surface); border-color: var(--selection-line); }
@@ -17,11 +17,11 @@
 .exchange-item-grid.exchange-item-grid .exchange-item:hover { background: var(--surface-hover); border-color: var(--line-strong); }
 
 /* Navigation and metadata recede; the active market remains the focal point. */
-.app-shell .sidebar { background: #11161e; border-right-color: var(--line); }
+.app-shell .sidebar { background: var(--surface); border-right-color: var(--line); }
 .app-shell .topbar { background: var(--canvas); }
 .app-shell .data-health { background: transparent; border-color: var(--line); }
 .app-shell .market-ticker { background: var(--surface); }
-.app-shell .market-ticker > button.active { background: #202c3d; }
+.app-shell .market-ticker > button.active { background: var(--accent-soft); }
 .app-shell .market-panel { background: var(--surface); }
 .app-shell .market-panel-header, .app-shell .market-tabs, .app-shell .market-list-head { background: transparent; }
 .app-shell .market-search, .app-shell .market-category-trigger { background: var(--canvas); }
@@ -40,3 +40,5 @@
 .build-page .planner-slot.unique { border-color: #886645; }
 .planner-jewel { background: var(--canvas); }
 .build-page .planner-toc>a:hover { background: var(--surface-hover); }
+
+.app-shell .market-icon.normal { color: var(--quiet); }

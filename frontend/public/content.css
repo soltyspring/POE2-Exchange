@@ -2,7 +2,7 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--canvas); color: var(--text); min-width: 0; }
 a { color: var(--accent); text-decoration: none; }
-a:hover { color: #c9dcff; }
+a:hover { color: var(--accent); }
 :focus-visible { outline: 2px solid var(--selection-line); outline-offset: 4px; }
 .skip-link { position: fixed; z-index: 5; top: -80px; left: 12px; padding: 14px 20px; background: var(--selection-line); color: var(--ink-on-accent); border-radius: 5px; }
 .skip-link:focus { top: 12px; }
@@ -40,7 +40,7 @@ h1 { margin: 0 0 22px; font-size: clamp(28px, 3.3vw, 42px); line-height: 1.35; l
 article { min-width: 0; }
 article > section { padding: 6px 0 25px; margin-bottom: 25px; border-bottom: 1px solid var(--line); scroll-margin-top: 24px; }
 article h2 { font-size: 23px; line-height: 1.5; margin: 0 0 18px; letter-spacing: -.025em; word-break: keep-all; }
-article p { font-size: 15px; line-height: 2.05; color: #bdc9da; margin: 0 0 18px; overflow-wrap: break-word; }
+article p { font-size: 15px; line-height: 2.05; color: var(--muted); margin: 0 0 18px; overflow-wrap: break-word; }
 article ul { padding-left: 20px; line-height: 2; font-size: 14px; }
 .article-note { padding: 18px; background: var(--surface-raised); color: var(--muted); border: 1px solid var(--line); border-radius: 6px; line-height: 1.8; font-size: 13px; }
 .related { margin-top: 30px; }
