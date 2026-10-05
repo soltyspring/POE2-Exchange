@@ -51,8 +51,11 @@ class SnapshotStore:
             try:
                 rows = [dict(row) for row in db.execute(
                     "SELECT m.id,m.category,m.name,m.base_type,m.price_divine,m.listing_count,"
-                    "m.observed_at,m.source_kind,d.variant FROM markets m LEFT JOIN market_metadata d "
-                    "ON d.league=m.league AND d.market_id=m.id WHERE m.league=? ORDER BY m.id", (league,))]
+                    "m.observed_at,m.source_kind,d.variant,f.fetched_at AS verified_at "
+                    "FROM markets m LEFT JOIN market_metadata d "
+                    "ON d.league=m.league AND d.market_id=m.id "
+                    "LEFT JOIN fetch_state f ON f.league=m.league AND f.category=m.category "
+                    "WHERE m.league=? ORDER BY m.id", (league,))]
             finally:
                 db.close()
             db_ms = (time.perf_counter() - db_start) * 1000
@@ -69,7 +72,9 @@ class SnapshotStore:
 def quotes(payload, snapshot, now):
     by_id, by_name, version = snapshot
     exalted = by_id.get('exchange:Currency:exalted')
-    fresh_rate = exalted and 0 <= now - exalted['observed_at'] <= 1800 and exalted['price_divine'] > 0
+    rate_verified = exalted.get('verified_at') if exalted else None
+    fresh_rate = (exalted and rate_verified is not None and 0 <= now - rate_verified <= 1800
+                  and exalted['price_divine'] > 0)
     rate = 1 / exalted['price_divine'] if fresh_rate else None
     results = {}
     for item in payload.items:
@@ -88,7 +93,9 @@ def quotes(payload, snapshot, now):
                       and (not item.variant or normalized(item.variant) == normalized(r.get('variant')))
                       and (not item.baseType or normalized(item.baseType) == normalized(r['base_type']))]
         row = candidates[0] if len(candidates) == 1 else None
-        state = 'missing' if row is None else ('ready' if 0 <= now - row['observed_at'] <= 1800 else 'stale')
+        verified_at = row.get('verified_at') if row else None
+        state = ('missing' if row is None else
+                 'ready' if verified_at is not None and 0 <= now - verified_at <= 1800 else 'stale')
         price_kind = 'unique_reference' if unique else 'tablet_reference' if tablet else 'consumable_reference' if consumable else None
         results[item.key] = dict(
             id=row['id'] if row else None,
@@ -97,11 +104,13 @@ def quotes(payload, snapshot, now):
             priceDivine=row['price_divine'] if state == 'ready' else None,
             priceKind=price_kind if row else None,
             observedAt=row['observed_at'] if row else None,
+            verifiedAt=verified_at,
             source=row['source_kind'] if row else None,
             sampleCount=row['listing_count'] if row else None, state=state)
     return dict(items=results, snapshotVersion=version,
                 rates=dict(exaltedPerDivine=rate,
                            observedAt=exalted['observed_at'] if exalted else None,
+                           verifiedAt=rate_verified,
                            state='ready' if fresh_rate else 'stale' if exalted else 'missing'),
                 state='ready' if by_id else 'collecting')
 

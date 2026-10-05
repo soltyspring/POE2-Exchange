@@ -20,9 +20,9 @@
 - 희귀 베이스, 등급별 경로석, 레벨별 젬 스냅샷은 아직 없다. 해당 종류 및 tier/level을 지정한 요청은 `missing`이다. 고유 시세로 대체하지 않는다.
 - 이름의 앞부분을 실제 옵션으로 추정하지 않는다. 옵션 복사 후 기존 상세 조회 흐름을 사용한다.
 
-응답 `items`는 key별 객체이며 `name`, `baseType`, `kind`, `priceExalted`, `priceDivine`, `priceKind`, `observedAt`, `source`, `sampleCount`, `state`를 포함한다. `sampleCount`는 원본의 listing_count이며 실거래 건수가 아니다. 원본에 없으면 null이다.
+응답 `items`는 key별 객체이며 `name`, `baseType`, `kind`, `priceExalted`, `priceDivine`, `priceKind`, `observedAt`, `verifiedAt`, `source`, `sampleCount`, `state`를 포함한다. `observedAt`은 가격이 마지막으로 바뀌어 저장된 시각이고, `verifiedAt`은 해당 원천 분류가 마지막으로 성공 확인된 시각이다. 원천의 200은 가격과 확인 시각을 기록하고, 304는 기존 가격을 유지하면서 확인 시각만 갱신한다. 실패는 확인 시각을 바꾸지 않는다. `state`는 `verifiedAt` 기준으로 30분이 지나면 `stale`이다. 엑잘 환율도 같은 기준을 쓴다. `sampleCount`는 원본의 listing_count이며 실거래 건수가 아니다. 원본에 없으면 null이다.
 
-`snapshotVersion`과 `rates.exaltedPerDivine`을 함께 반환한다. 관측 후 30분이 지났으면 `stale`이며 가격은 null이다. 환율만 오래된 경우 신선한 디바인 가격은 남지만 엑잘 환산은 null이다. 오버레이는 priceExalted가 있는 항목만 가격 정렬에 사용해야 한다.
+`snapshotVersion`과 `rates.exaltedPerDivine`을 함께 반환한다. 확인 후 30분이 지났으면 `stale`이며 가격은 null이다. 환율 확인만 오래된 경우 신선한 디바인 가격은 남지만 엑잘 환산은 null이다. 오버레이는 priceExalted가 있는 항목만 가격 정렬에 사용해야 한다.
 
 스냅샷은 60초 동안 메모리에 보관하고 동시 로딩을 공유한다. 수집 데이터 변경 시 무효화하며 수집 완료 시 새 스냅샷을 미리 로딩한다. gzip은 기존 미들웨어로 지원한다. ETag와 If-None-Match를 지원하며 동일한 응답은 304이다. Server-Timing은 db/serialize/cache 밀리초를 제공한다. 메모리 인덱스 구축과 전체 HTTP 시간은 별도로 측정해야 한다.
 
