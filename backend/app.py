@@ -25,6 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from overlay_prices import OverlayRequest, SnapshotStore, overlay_response
+from item_sources import InspectItem, inspect_item, init_source_tables, save_catalog, combined_catalog
 
 BASE = "https://poe.ninja/poe2/api/economy"
 EXCHANGE_TYPES = {
@@ -169,6 +170,7 @@ def korean_name(value: str | None) -> str | None:
 
 def init_db():
     with connect() as db:
+        init_source_tables(db)
         db.executescript("""
         CREATE TABLE IF NOT EXISTS markets (
           league TEXT NOT NULL, id TEXT NOT NULL, category TEXT NOT NULL,
@@ -911,6 +913,8 @@ class Collector:
             due = [cat for cat in target_categories
                    if force or now - states.get(cat, {}).get("attempted_at", 0) >= interval]
             if not due:
+                if categories is None:
+                    schedule_job('scout-catalog:' + league, lambda: refresh_scout_catalog(league))
                 return {"refreshed": [], "cached": sorted(target_categories)}
 
             scout_items = await self.get_scout_items(league)
@@ -970,6 +974,8 @@ class Collector:
             if refreshed:
                 overlay_snapshots.invalidate(league)
                 await asyncio.to_thread(overlay_snapshots.get, league, connect)
+            if categories is None:
+                schedule_job('scout-catalog:' + league, lambda: refresh_scout_catalog(league))
             return {"refreshed": sorted(refreshed), "cached": cached}
 
     async def refresh_market(self, league: str, market_id: str, force: bool = False):
@@ -1004,6 +1010,27 @@ def schedule_league_refresh():
 
 def schedule_collection(league):
     schedule_job('market:' + league, lambda: collector.refresh(league))
+
+
+async def refresh_scout_catalog(league):
+    db = connect()
+    try:
+        last = db.execute('SELECT MAX(fetched_at) FROM scout_catalog WHERE league=?', (league,)).fetchone()[0]
+    finally:
+        db.close()
+    if last and time.time() - last < MARKET_POLL_SECONDS:
+        return 0
+    base = 'https://api.poe2scout.com/poe2'
+    responses = []
+    for path in [f'/Leagues/{quote(league, safe="")}/Items',
+                 f'/Leagues/{quote(league, safe="")}/Items/PriceHistory', '/Leagues']:
+        response = await collector._get_with_backoff(base + path)
+        response.raise_for_status()
+        responses.append(response.json())
+    info = next((item for item in responses[2] if item.get('Value') == league), None)
+    if info is None:
+        raise ValueError('Scout league not found')
+    return await asyncio.to_thread(save_catalog, connect, league, responses[0], responses[1], info, korean_name)
 
 
 async def overlay_prices(payload: OverlayRequest, request: Request):
@@ -1094,6 +1121,33 @@ app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http
                    allow_methods=["GET", "POST"], allow_headers=["*"],
                    expose_headers=["ETag", "Server-Timing"])
 app.add_api_route('/api/overlay/prices', overlay_prices, methods=['POST'])
+
+
+@app.post('/api/items/inspect')
+def item_inspect(payload: InspectItem):
+    try:
+        return inspect_item(payload)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get('/api/catalog')
+async def item_catalog(league: str = Query(min_length=1, max_length=120)):
+    try:
+        valid = await collector.get_leagues()
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, f'League source unavailable: {exc}') from exc
+    if league not in {item['id'] for item in valid}:
+        raise HTTPException(400, 'Unknown league')
+    result = await asyncio.to_thread(combined_catalog, connect, league)
+    if not result['scout']:
+        schedule_job('scout-catalog:' + league, lambda: refresh_scout_catalog(league))
+    return result
+
+
+@app.get('/tools/item-check')
+def item_check_page():
+    return FileResponse(ROOT / 'frontend' / 'public' / 'item-check.html')
 
 
 @app.get("/api/leagues")

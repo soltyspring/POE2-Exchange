@@ -268,6 +268,7 @@ export function MarketComparison({
       </header>
 
       <div className="market-browser-toolbar">
+        <a href="/tools/item-check" target="_blank" rel="noopener noreferrer">장비 옵션 비교 · Scout 추가 목록 ↗</a>
         <div className="market-browser-sections" role="tablist" aria-label="시장 구분"><button role="tab" aria-selected={section === 'general'} className={section === 'general' ? 'active' : ''} onClick={() => changeSection('general')}>일반 교환품 <span>{generalCount.toLocaleString('ko-KR')}</span></button><button role="tab" aria-selected={section === 'equipment'} className={section === 'equipment' ? 'active' : ''} onClick={() => changeSection('equipment')}>고유 장비 <span>{equipmentCount.toLocaleString('ko-KR')}</span></button></div>
         <label className="market-browser-search"><Search size={17}/><input ref={searchRef} value={query} onChange={event => setQuery(event.target.value)} onKeyDown={onSearchKeyDown} placeholder="아이템 또는 베이스 타입 검색" aria-label="거래소 아이템 검색"/><kbd>Ctrl K</kbd>{query && <button onClick={() => setQuery('')} aria-label="검색어 지우기"><X size={15}/></button>}</label>
         <label className="market-browser-unit"><span>가격 단위</span><select value={priceMode} onChange={event => setPriceMode(event.target.value as MarketPriceMode)}><option value="adaptive">자동</option><option value="divine">신성</option><option value="chaos">카오스</option><option value="exalted">엑잘</option></select><ChevronDown size={14}/></label>

@@ -51,3 +51,19 @@ DB가 비어 있는 markets/overlay 요청은 중복을 공유하는 백그라�
 선대 서판의 Normal/Magic/Rare 변형, detailsId, 요구 레벨, 타락 여부를 별도 market_metadata 테이블에 저장한다. 기존 markets 테이블과 id 형식은 유지한다. 웹 목록에 변형 정보를 표시하며 공개 분류 23종이 웹 목록에 포함된다.
 
 Forbidden Rites의 23종을 실제 새로 수집했고 종류별 수집 오류는 없었다. 서판 및 유물 추가 데이터는 고유 유물 5개, 고유 서판 9개, 선대 서판 23개다. 종류와 항목 수는 원본에 따라 변동된다. poe.ninja에서 제공하지 않는 임의 희귀 옵션 조합 시세를 만들어 내지는 않는다.
+
+## 공식 장비 비교 및 Scout 목록
+
+`/tools/item-check`에서 게임의 복사 텍스트를 붙여 넣으면 전체 이름·베이스·옵션 후보를 분리하고, 베이스/옵션 복사 버튼과 공식 거래 사이트 링크를 제공한다. `POST /api/items/inspect` 요청은 league/text다. 옵션 후보는 원문 보존에 목적이 있으며 속성 id 매핑이나 정확한 옵션 파싱이 아니다. 설명 문장이 섞일 수 있으므로 사용자가 확인해야 한다.
+
+GGG 개발자 문서의 Available Resources는 문서에 정의되지 않은 내부 웹 API 역공학을 지원하지 않으며 제한한다고 명시한다. 장비 매물 검색은 공개 API Reference에 포함되어 있지 않아 이번 구현에서는 자동 조회를 추가하지 않는다. 공식 검색 조건 입력과 실제 가격 비교는 사용자가 수행한다.
+
+공식 문서: https://www.pathofexile.com/developer/docs#resources
+
+`GET /api/catalog?league=Forbidden%20Rites`는 ninja 목록, Scout 전체 목록, 일치 후보 없는 Scout 목록 및 counts를 반환한다. Scout 공개 OpenAPI의 Items/Items/PriceHistory/Leagues를 사용해 전체 목록과 제공된 관측 이력을 수집한다. league의 BaseCurrencyApiId가 exalted로 확인된 경우에만 관측 가격을 엑잘로 표시한다. CurrentPrice에는 관측 시각이 없으므로 자동 가격 판단에 사용하지 않으며 rawCurrentPrice로만 보존한다.
+
+공개 API: https://api.poe2scout.com/swagger
+
+Scout 수집은 기본 15분 주기로 공유 백그라운드 작업으로 실행하며, 빈 목록/잘못된 응답은 이전 DB를 보존한다. 최초 catalog 요청도 백그라운드 수집을 시작한다. 30분 지난 관측 가격과 시각 없는 가격은 제외한다. ninja 원본 가격을 Scout 가격으로 덮어쓰지 않는다.
+
+2026-10-05 로컬 비교 결과 ninja 1,394개, Scout 1,288개, 이름/베이스 또는 API id 일치 후보 없는 Scout 211개. 211개는 엄밀하게 중복 제거가 완료된 새 아이템 수가 아니다. 번역 누락·원본 이름 표기·고유 변형 차이 때문에 추가 후보로 표시한다. 각 원본 출처와 관측 시각을 유지한다.
