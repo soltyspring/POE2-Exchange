@@ -1,0 +1,6 @@
+{
+  "source": "https://github.com/seominugi/poe-game-data",
+  "names_and_skills_snapshot": "v2026.09.17.2",
+  "files": ["poe2/names/kr.json", "poe2/skills/json/ActiveSkills.json", "data/unique_names_kr.json (existing market localization cache)"],
+  "purpose": "Exact game name lookup for build display and analysis; no machine translation; raw build exports stay unchanged."
+}

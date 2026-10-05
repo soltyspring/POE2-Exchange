@@ -23,6 +23,16 @@ def document():
 
 
 class BuildImportTests(unittest.IsolatedAsyncioTestCase):
+    def test_game_names_and_unknown_fallback(self):
+        self.assertEqual(module.korean_build_name('Spear Stab'), '창 찌르기')
+        self.assertEqual(module.korean_build_name('The Taming'), '조련')
+        self.assertEqual(module.korean_build_name('  Ancestral   Tiara '), '선대의 티아라')
+        self.assertEqual(module.korean_build_name('Unknown custom name'), 'Unknown custom name')
+        original = document()
+        original['data']['buildVariants']['values'][-1]['equipment']['helmet']['commonItem']['name'] = 'The Taming'
+        self.assertEqual(analyze_document(original)['variants'][-1]['equipment'][0]['name'], '조련')
+        self.assertEqual(original['data']['buildVariants']['values'][-1]['equipment']['helmet']['commonItem']['name'], 'The Taming')
+
     def setUp(self):
         module._cache.clear()
         module._blocked_until = 0

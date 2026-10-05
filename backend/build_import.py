@@ -21,6 +21,22 @@ from pydantic import BaseModel, Field
 router = APIRouter()
 ENDPOINT = 'https://mobalytics.gg/api/poe-2/v1/graphql/query'
 QUERY = Path(__file__).with_name('mobalytics_build.gql').read_text(encoding='utf-8')
+NAMES_KR = json.loads(Path(__file__).with_name('build_names_kr.json').read_text(encoding='utf-8'))
+
+
+def korean_build_name(name, slug=None):
+    if name:
+        key = re.sub(r'\s+', ' ', name.strip().lower()).replace('’', "'")
+        if key in NAMES_KR:
+            return NAMES_KR[key]
+    if slug:
+        identifier = re.sub(r'^(?:gem|skill|support|jewel)-', '', slug)
+        if 'skill:' + identifier in NAMES_KR:
+            return NAMES_KR['skill:' + identifier]
+        key = identifier.replace('-', ' ')
+        if key in NAMES_KR:
+            return NAMES_KR[key]
+    return name or slug or '이름 미제공'
 TTL = 300
 MAX_BYTES = 8 * 1024 * 1024
 _cache: dict[str, tuple[float, dict]] = {}
@@ -75,7 +91,7 @@ def analyze_document(document: dict) -> dict:
             common = value.get('commonItem') or {}
             if not common:
                 return
-            items.append({'slot': slot, 'slot_label': label, 'name': common.get('name') or common.get('slug') or '이름 미제공',
+            items.append({'slot': slot, 'slot_label': label, 'name': korean_build_name(common.get('name'), common.get('slug')),
                           'unique': bool(common.get('isUnique')), 'item_class': common.get('itemClassSlug'), 'icon': common.get('iconURL'),
                           'explicit': _list(common.get('explicitDescriptions')), 'implicit': _list(common.get('implicitDescriptions')),
                           'stats': _list(common.get('stats')), 'requirements': _list(common.get('requirements')),
@@ -92,10 +108,10 @@ def analyze_document(document: dict) -> dict:
         for gem in _list(skills.get('gems')):
             active = gem.get('activeSkill') or {}
             if active:
-                gems.append({'name': active.get('name') or active.get('gemSlug') or '이름 미제공',
+                gems.append({'name': korean_build_name(active.get('name'), active.get('gemSlug')),
                              'slug': active.get('gemSlug'), 'icon': active.get('iconURL') or active.get('gemIconURL'),
                              'level': active.get('level'), 'weapon_set': gem.get('weaponSet'),
-                             'supports': [{**support, 'name': priority_names.get(support.get('gemSlug'))} for support in _list(gem.get('subSkills'))]})
+                             'supports': [{**support, 'name': korean_build_name(priority_names.get(support.get('gemSlug')), support.get('gemSlug'))} for support in _list(gem.get('subSkills'))]})
         passive = variant.get('passiveTree') or {}
         tree = {key: list(dict.fromkeys(_list((passive.get(key) or {}).get('selectedSlugs'))))
                 for key in ['mainTree', 'set1Tree', 'set2Tree', 'ascendancyTree']}
@@ -116,7 +132,7 @@ def analyze_document(document: dict) -> dict:
             'has_pob': bool(data.get('pobCode')), 'has_loot_filter': bool(data.get('lootFilter')),
             'notes': ['공유 문서에 저장된 장비·젬·노드를 정리한 결과입니다. DPS나 생존력 계산은 포함하지 않습니다.',
                       '장비 개수에는 무기 세트 1·2가 모두 포함됩니다. 패시브는 저장된 노드 수이며 총 소모 포인트와 다를 수 있습니다.',
-                      '아이템·젬·노드 이름은 원본 표기를 유지합니다. 보조 스킬에는 원본의 하위 스킬도 포함될 수 있습니다.']}
+                      '아이템·젬 이름은 서미누기 게임 데이터와 대조한 한국어 명칭입니다. 미일치 이름은 원문을 유지하며 빌드 JSON은 원본 데이터입니다. 보조 스킬에는 하위 스킬도 포함될 수 있습니다.']}
 
 
 async def fetch_document(build_id: str) -> dict:
