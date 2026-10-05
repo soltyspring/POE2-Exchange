@@ -8,6 +8,7 @@ import { readStoredIds, savePreference, snapshotHealth } from './productModel'
 import { useMarketDialog } from './useMarketDialog'
 import { request } from './apiClient'
 import { chartTheme } from './theme'
+import { UiButton } from './ui'
 import { MarketPrice } from './marketDisplay'
 
 type Market = {
@@ -545,7 +546,7 @@ export default function App() {
     </aside>
 
     <main className="main" id="market-main" tabIndex={-1}>
-      <header className="topbar"><div className="breadcrumb"><b>시세 대시보드</b></div><div className="top-actions"><button className="reward-launch" onClick={() => {setExchangeOpen(false); setRewardsOpen(true)}}><Gift size={16}/>콘텐츠 보상</button><button className="exchange-launch" onClick={() => {setRewardsOpen(false); setExchangeOpen(true)}}><Coins size={16}/>거래소 시세표</button><span className={"live-pill " + snapshotHealth(data?.source_status || []).quality} aria-live="polite"><i/> {lastFetched ? `${timeAgo(lastFetched)} 갱신` : '데이터 연결'}</span><button className={`icon-button ${refreshing ? 'spinning' : ''}`} aria-label="선택 아이템 새로고침" title={data?.preview_mode ? "로컬 미리보기는 저장된 데이터만 읽습니다." : "선택 아이템 강제 갱신 · 캐시 무시"} disabled={!selectedId || refreshing || data?.preview_mode} onClick={() => void forceRefreshSelected()}><RefreshCw size={17}/></button><a className="help-link" href="/guide/index.html">사용 가이드</a></div></header>
+      <header className="topbar"><div className="breadcrumb"><b>시세 대시보드</b></div><div className="top-actions"><UiButton className="reward-launch" onClick={() => {setExchangeOpen(false); setRewardsOpen(true)}}><Gift size={16}/>콘텐츠 보상</UiButton><UiButton className="exchange-launch" onClick={() => {setRewardsOpen(false); setExchangeOpen(true)}}><Coins size={16}/>거래소 시세표</UiButton><span className={"live-pill " + snapshotHealth(data?.source_status || []).quality} aria-live="polite"><i/> {lastFetched ? `${timeAgo(lastFetched)} 갱신` : '데이터 연결'}</span><button className={`icon-button ${refreshing ? 'spinning' : ''}`} aria-label="선택 아이템 새로고침" title={data?.preview_mode ? "로컬 미리보기는 저장된 데이터만 읽습니다." : "선택 아이템 강제 갱신 · 캐시 무시"} disabled={!selectedId || refreshing || data?.preview_mode} onClick={() => void forceRefreshSelected()}><RefreshCw size={17}/></button><a className="help-link" href="/guide/index.html">사용 가이드</a></div></header>
       <div className="content">
         <div className="page-heading"><div><span className="page-eyebrow">PATH OF EXILE 2 · MARKET</span><h1>시세를 읽고, 타이밍을 찾으세요.</h1><p>아이템을 찾고, 가격 흐름과 저렴했던 시간을 한 화면에서 확인하세요.</p></div><label className="league-select"><span>거래 리그</span><select value={league} onChange={e => {setLeague(e.target.value); setData(null); setSelectedId('')}}>{leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select><ChevronDown size={15}/></label></div>
         <DataHealth states={data?.source_status || []} preview={!!data?.preview_mode}/>{error && <div className="error-banner" role="alert">{error}<button onClick={() => void fetchMarkets(true)}>다시 시도</button></div>}

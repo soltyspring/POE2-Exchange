@@ -1,0 +1,17 @@
+/* Shared surface primitives. Foregrounds and chart colors are unchanged. */
+.site-header { background: var(--surface); border-bottom: 1px solid var(--line); }
+.ui-button { border: 1px solid var(--line); border-radius: 6px; background: var(--surface-raised); }
+.ui-button:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--blue-200); }
+.ui-button:focus-visible { outline: 2px solid var(--blue-500); outline-offset: 3px; }
+.app-shell .sidebar { background: var(--canvas); }
+.app-shell .brand-mark { background: var(--blue-500); }
+.app-shell .side-link.active { background: var(--blue-900); border: 1px solid var(--blue-200); }
+.app-shell .summary-card.primary { background: var(--blue-900); border-color: var(--blue-500); }
+.build-page .build-primary { background: var(--blue-900); border-color: var(--blue-200); }
+.build-page .planner-export .build-primary { background: var(--blue-200); border-color: var(--blue-50); }
+.build-page .planner-slot { background: var(--canvas); }
+.build-page .planner-slot.rare, .build-page .planner-slot.unique { background: var(--canvas); }
+.planner-slot-label { background: var(--surface); }
+.planner-socket-count, .planner-jewel>small { background: var(--blue-200); }
+.app-shell .exchange-item-grid.exchange-item-grid .exchange-item.selected { background: var(--accent-soft); border-color: var(--blue-200); box-shadow: inset 3px 0 var(--blue-500); }
+.exchange-item-grid.exchange-item-grid .exchange-item:hover { background: var(--surface-hover); border-color: var(--blue-200); }

@@ -2,7 +2,7 @@
   position: fixed;
   z-index: 1250;
   inset: 0;
-  background: #10243c88;
+  background: var(--overlay);
   backdrop-filter: blur(5px);
 }
 
@@ -13,7 +13,7 @@
   width: 100vw;
   height: 100dvh;
   overflow: hidden;
-  background: #f4f7fb;
+  background: var(--surface);
   color: #243b55;
 }
 
@@ -27,7 +27,7 @@
 .market-browser input:focus-visible,
 .market-browser select:focus-visible,
 .market-comparison-row:focus-visible {
-  outline: 2px solid #2d77cf;
+  outline: 2px solid var(--line);
   outline-offset: 2px;
 }
 
@@ -38,8 +38,8 @@
   gap: 22px;
   min-height: 94px;
   padding: 17px 28px;
-  border-bottom: 1px solid #d9e3ee;
-  background: #fff;
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--surface);
 }
 
 .market-browser-eyebrow {
@@ -69,9 +69,9 @@
   align-items: center;
   gap: 9px;
   padding: 9px 12px;
-  border: 1px solid #dce6f0;
+  border: 1px solid var(--line-strong);
   border-radius: 8px;
-  background: #f7faff;
+  background: var(--surface);
   color: #55708d;
 }
 
@@ -97,14 +97,14 @@
   place-items: center;
   width: 40px;
   height: 40px;
-  border: 1px solid #cbd9e7;
+  border: 1px solid var(--line-strong);
   border-radius: 8px;
-  background: #f6f9fc;
+  background: var(--surface);
   color: #56718e;
 }
 
 .market-browser-close:hover {
-  background: #eaf2fb;
+  background: var(--surface);
   color: #2468b7;
 }
 
@@ -114,17 +114,17 @@
   align-items: center;
   gap: 10px;
   padding: 11px 24px;
-  border-bottom: 1px solid #dbe5ef;
-  background: #fff;
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--surface);
 }
 
 .market-browser-sections {
   display: flex;
   gap: 4px;
   padding: 3px;
-  border: 1px solid #d7e2ed;
+  border: 1px solid var(--line-strong);
   border-radius: 8px;
-  background: #f2f6fa;
+  background: var(--surface);
 }
 
 .market-browser-sections button {
@@ -140,9 +140,9 @@
 }
 
 .market-browser-sections button.active {
-  background: #fff;
+  background: var(--surface);
   color: #276abd;
-  box-shadow: 0 2px 7px #183b6418;
+  box-shadow: 0 2px 7px var(--shadow-color);
 }
 
 .market-browser-sections span {
@@ -158,15 +158,15 @@
   min-width: 0;
   height: 42px;
   padding: 0 11px;
-  border: 1px solid #d4e0ec;
+  border: 1px solid var(--line-strong);
   border-radius: 7px;
-  background: #fff;
+  background: var(--surface);
   color: #7c91a8;
 }
 
 .market-browser-search:focus-within {
-  border-color: #6d9fd7;
-  box-shadow: 0 0 0 3px #e6f1ff;
+  border-color: var(--line-strong);
+  box-shadow: 0 0 0 3px var(--shadow-color);
 }
 
 .market-browser-search input {
@@ -185,9 +185,9 @@
 
 .market-browser-search kbd {
   padding: 2px 5px;
-  border: 1px solid #d3deea;
+  border: 1px solid var(--line-strong);
   border-radius: 4px;
-  background: #f5f7fa;
+  background: var(--surface);
   color: #8092a5;
   font-size: 9px;
 }
@@ -208,9 +208,9 @@
   gap: 7px;
   height: 42px;
   padding: 0 10px;
-  border: 1px solid #d4e0ec;
+  border: 1px solid var(--line-strong);
   border-radius: 7px;
-  background: #fff;
+  background: var(--surface);
   color: #6e849b;
 }
 
@@ -237,9 +237,9 @@
   gap: 7px;
   height: 42px;
   padding: 0 11px;
-  border: 1px solid #d4e0ec;
+  border: 1px solid var(--line-strong);
   border-radius: 7px;
-  background: #fff;
+  background: var(--surface);
   color: #49647f;
   font-size: 11px;
   font-weight: 750;
@@ -289,8 +289,8 @@
 .market-browser-categories {
   padding: 15px 12px;
   overflow-y: auto;
-  border-right: 1px solid #d4e0eb;
-  background: #eaf1f8;
+  border-right: 1px solid var(--line-strong);
+  background: var(--surface);
   scrollbar-width: thin;
 }
 
@@ -323,9 +323,9 @@
   min-height: 42px;
   margin-bottom: 5px;
   padding: 8px 11px;
-  border: 1px solid #d3dfeb;
+  border: 1px solid var(--line-strong);
   border-radius: 7px;
-  background: #fff;
+  background: var(--surface);
   color: #526b84;
   font-size: 12px;
   font-weight: 750;
@@ -333,15 +333,15 @@
 }
 
 .market-browser-categories > button:hover {
-  border-color: #9bb8d7;
-  background: #f8fbff;
+  border-color: var(--line-strong);
+  background: var(--surface);
 }
 
 .market-browser-categories > button.active {
-  border-color: #6c9ed5;
-  background: #e5f1ff;
+  border-color: var(--line-strong);
+  background: var(--surface);
   color: #1f60ad;
-  box-shadow: inset 3px 0 #3478ca;
+  box-shadow: inset 3px 0 var(--shadow-color);
 }
 
 .market-browser-categories > button small {
@@ -355,7 +355,7 @@
   overflow: auto;
   padding: 0 20px 24px;
   scrollbar-width: thin;
-  scrollbar-color: #b9c8d8 #eef3f8;
+  scrollbar-color: var(--line-strong) var(--line-strong);
 }
 
 .market-browser-context {
@@ -368,8 +368,8 @@
   gap: 16px;
   min-height: 57px;
   padding: 10px 4px;
-  border-bottom: 1px solid #dbe4ed;
-  background: #f4f7fbf2;
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--surface);
   backdrop-filter: blur(7px);
 }
 
@@ -404,8 +404,8 @@
   z-index: 4;
   top: 57px;
   min-height: 41px;
-  border-bottom: 1px solid #cedae6;
-  background: #edf3f9;
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--surface);
   color: #627990;
 }
 
@@ -425,23 +425,23 @@
 
 .market-comparison-head > button:hover {
   color: #2769b6;
-  background: #e5eef8;
+  background: var(--surface);
 }
 
 .market-game-order {
   margin: 9px 0;
   padding: 6px 10px;
-  border: 1px solid #d2dfeb;
+  border: 1px solid var(--line-strong);
   border-radius: 6px;
-  background: #fff;
+  background: var(--surface);
   color: #667f98;
   font-size: 10px;
   font-weight: 800;
 }
 
 .market-game-order.active {
-  border-color: #8cafd5;
-  background: #eaf3ff;
+  border-color: var(--line-strong);
+  background: var(--surface);
   color: #2565ad;
 }
 
@@ -453,23 +453,23 @@
 
 .market-comparison-row {
   min-height: 74px;
-  border: 1px solid #dbe4ed;
+  border: 1px solid var(--line-strong);
   border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 2px 8px #173a6110;
+  background: var(--surface);
+  box-shadow: 0 2px 8px var(--shadow-color);
   cursor: pointer;
   content-visibility: auto;
   contain-intrinsic-size: 74px;
 }
 
 .market-comparison-row:hover {
-  border-color: #8eb2d8;
-  background: #fafdff;
+  border-color: var(--line-strong);
+  background: var(--surface);
 }
 
 .market-comparison-row.selected {
-  border-color: #5b91cd;
-  box-shadow: inset 3px 0 #3478ca, 0 3px 12px #173a6118;
+  border-color: var(--line);
+  box-shadow: inset 3px 0 var(--shadow-color), 0 3px 12px var(--shadow-color);
 }
 
 .market-comparison-row > div,
@@ -663,26 +663,26 @@
 }
 
 .market-liquidity.is-good {
-  background: #dff5ee;
+  background: var(--success-soft);
   color: #237760;
 }
 
 .market-liquidity.is-limited {
-  background: #fff1d6;
+  background: var(--surface);
   color: #8e6618;
 }
 
 .market-liquidity.is-low {
-  background: #ffe6eb;
+  background: var(--danger-soft);
   color: #af3d53;
 }
 
 .comparison-action-cell button {
   min-height: 34px;
   padding: 0 10px;
-  border: 1px solid #aec4dc;
+  border: 1px solid var(--line-strong);
   border-radius: 6px;
-  background: #f3f8fe;
+  background: var(--surface);
   color: #2a68ac;
   font-size: 10px;
   font-weight: 800;
@@ -690,17 +690,17 @@
 }
 
 .comparison-action-cell button:hover {
-  border-color: #6f9fd2;
-  background: #e3f0ff;
+  border-color: var(--line-strong);
+  background: var(--surface);
 }
 
 .market-comparison-more {
   width: 100%;
   min-height: 44px;
   margin-top: 10px;
-  border: 1px solid #d4e0eb;
+  border: 1px solid var(--line-strong);
   border-radius: 7px;
-  background: #fff;
+  background: var(--surface);
   color: #396789;
   font-size: 11px;
   font-weight: 800;
@@ -717,9 +717,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border: 1px dashed #ccd9e6;
+  border: 1px dashed var(--line-strong);
   border-radius: 9px;
-  background: #fff;
+  background: var(--surface);
   color: #6c8298;
 }
 
@@ -737,9 +737,9 @@
 .market-comparison-empty button {
   margin-top: 13px;
   padding: 8px 12px;
-  border: 1px solid #a8c0da;
+  border: 1px solid var(--line-strong);
   border-radius: 6px;
-  background: #edf5ff;
+  background: var(--surface);
   color: #2767ac;
   font-size: 11px;
   font-weight: 800;
@@ -752,8 +752,8 @@
   gap: 15px;
   min-height: 57px;
   padding: 9px 24px;
-  border-top: 1px solid #d6e1ec;
-  background: #fff;
+  border-top: 1px solid var(--line-strong);
+  background: var(--surface);
   color: #637b93;
   font-size: 10px;
 }
@@ -775,16 +775,16 @@
 .market-browser-foot > button {
   min-height: 38px;
   padding: 0 14px;
-  border: 1px solid #7fa6d0;
+  border: 1px solid var(--line-strong);
   border-radius: 6px;
-  background: #e8f2ff;
+  background: var(--surface);
   color: #245f9f;
   font-size: 11px;
   font-weight: 850;
 }
 
 .market-browser-foot > button:hover {
-  background: #dcecff;
+  background: var(--surface);
 }
 
 .market-browser-foot > button:disabled {
@@ -896,8 +896,8 @@
     overflow-x: auto;
     overflow-y: hidden;
     border-right: 0;
-    border-bottom: 1px solid #d7e2ec;
-    background: #eaf1f8;
+    border-bottom: 1px solid var(--line-strong);
+    background: var(--surface);
     scroll-snap-type: x proximity;
   }
 

@@ -1,19 +1,30 @@
 :root {
   color-scheme: dark;
-  --canvas: #0b121d;
-  --surface: #111a28;
-  --surface-raised: #172235;
-  --surface-hover: #1c2c43;
-  --line: #2a3a50;
+  /* Palette: https://colorhunt.co/palette/e3f2fd90caf92196f30d47a1 */
+  --blue-50: #e3f2fd;
+  --blue-200: #90caf9;
+  --blue-500: #2196f3;
+  --blue-900: #0d47a1;
+  --canvas: #0a367b;
+  --surface: var(--blue-900);
+  --surface-raised: #1252ae;
+  --surface-hover: #165eb9;
+  --line: #3574b8;
+  --line-strong: var(--blue-200);
   --text: #eef3fb;
   --muted: #a7b6ca;
   --quiet: #8395ae;
   --accent: #80aaff;
-  --accent-soft: #1e3554;
+  --accent-soft: #174e96;
   --gold: #efd18d;
   --success: #79d5b1;
   --warning: #efd18d;
   --danger: #ff8596;
+  --ink-on-accent: #0b121d;
+  --overlay: #062459aa;
+  --shadow-color: #041c4933;
+  --success-soft: #174e53;
+  --danger-soft: #572946;
   --radius: 10px;
   --space: 8px;
   font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;

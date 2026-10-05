@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Shield, Sparkles, Swords } from 'lucide-react'
+import { UiButton } from './ui'
 import type { BuildVariant, Equipment } from './buildExport'
 
 function BuildIcon({url, label}: {url?: string | null; label: string}) {
@@ -35,16 +36,16 @@ export function BuildPresentation({variant}: {variant: BuildVariant}) {
   const switchSet = (set: number) => {setWeaponSet(set); if (selectedSlot.startsWith('mainHand.') || selectedSlot.startsWith('offHand.')) setSelectedSlot(selectedSlot.replace(/set[12]$/,`set${set}`))}
   return <div className="planner-sections">
     <section id="build-equipment" className="planner-panel"><header><h2><Swords size={19}/>장비</h2><span>아이콘을 눌러 옵션 확인</span></header>
-      <div className="planner-equipment"><div className="planner-equipment-stage"><div className="planner-weapon-sets" role="group" aria-label="무기 세트"><button aria-pressed={weaponSet===1} className={weaponSet===1?'active':''} onClick={()=>switchSet(1)}>세트 1</button><button aria-pressed={weaponSet===2} className={weaponSet===2?'active':''} onClick={()=>switchSet(2)}>세트 2</button></div>
+      <div className="planner-equipment"><div className="planner-equipment-stage"><div className="planner-weapon-sets" role="group" aria-label="무기 세트"><UiButton aria-pressed={weaponSet===1} className={weaponSet===1?'active':''} onClick={()=>switchSet(1)}>세트 1</UiButton><UiButton aria-pressed={weaponSet===2} className={weaponSet===2?'active':''} onClick={()=>switchSet(2)}>세트 2</UiButton></div>
         <div className="planner-paperdoll">{layout.map(([slot,label])=>{
           const id = ['mainHand','offHand'].includes(slot) ? `${slot}.set${weaponSet}` : slot
           const item = variant.equipment.find(value=>value.slot===id)
-          return <button key={slot} className={`planner-slot slot-${slot} ${item?.unique?'unique':item?'rare':'empty'} ${selectedSlot===id?'selected':''}`} aria-pressed={selectedSlot===id} aria-label={item ? `${label} · ${item.name}` : `${label} · 장착 정보 없음`} title={item?.name || label} disabled={!item} onClick={()=>setSelectedSlot(id)}>
+          return <UiButton key={slot} className={`planner-slot slot-${slot} ${item?.unique?'unique':item?'rare':'empty'} ${selectedSlot===id?'selected':''}`} aria-pressed={selectedSlot===id} aria-label={item ? `${label} · ${item.name}` : `${label} · 장착 정보 없음`} title={item?.name || label} disabled={!item} onClick={()=>setSelectedSlot(id)}>
             {item ? <BuildIcon url={item.icon} label={item.name}/> : <Shield size={22}/>}
             <span className="planner-slot-label">{label}</span>{item?.runes.length ? <span className="planner-socket-count">{item.runes.length}</span> : null}
-          </button>
+          </UiButton>
         })}</div>
-        {variant.equipment.filter(item=>item.slot==='extraRing').map(item=><button className="planner-extra-ring" key={item.slot} onClick={()=>setSelectedSlot(item.slot)}><BuildIcon url={item.icon} label={item.name}/>추가 반지</button>)}
+        {variant.equipment.filter(item=>item.slot==='extraRing').map(item=><UiButton className="planner-extra-ring" key={item.slot} onClick={()=>setSelectedSlot(item.slot)}><BuildIcon url={item.icon} label={item.name}/>추가 반지</UiButton>)}
         <div className="planner-jewels"><span>주얼 <small>{variant.jewels.length}개</small></span><div>{variant.jewels.map((jewel,index)=><div className={`planner-jewel ${jewel.isUnique?'unique':''}`} key={index} title={`${jewel.jewelSlug} · ${jewel.nodeSlug}`}><BuildIcon url={jewel.iconURL} label={jewel.jewelSlug}/><small>{index+1}</small></div>)}</div></div>
       </div><ItemDetails item={selected}/></div>
     </section>
