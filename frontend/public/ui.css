@@ -1,17 +1,42 @@
 /* Shared surface primitives. Foregrounds and chart colors are unchanged. */
 .site-header { background: var(--surface); border-bottom: 1px solid var(--line); }
 .ui-button { border: 1px solid var(--line); border-radius: 6px; background: var(--surface-raised); }
-.ui-button:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--blue-200); }
-.ui-button:focus-visible { outline: 2px solid var(--blue-500); outline-offset: 3px; }
+.ui-button:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--line-strong); }
+.ui-button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
 .app-shell .sidebar { background: var(--canvas); }
-.app-shell .brand-mark { background: var(--blue-500); }
-.app-shell .side-link.active { background: var(--blue-900); border: 1px solid var(--blue-200); }
-.app-shell .summary-card.primary { background: var(--blue-900); border-color: var(--blue-500); }
-.build-page .build-primary { background: var(--blue-900); border-color: var(--blue-200); }
-.build-page .planner-export .build-primary { background: var(--blue-200); border-color: var(--blue-50); }
+.app-shell .brand-mark { background: var(--focus-ring); }
+.app-shell .side-link.active { background: var(--accent-soft); border: 1px solid var(--line-strong); box-shadow: inset 2px 0 var(--selection-line); }
+.app-shell .summary-card.primary { background: var(--action-surface); border-color: var(--focus-ring); }
+.build-page .build-primary { background: var(--action-surface); border-color: var(--selection-line); }
+.build-page .planner-export .build-primary { background: var(--action-filled); border-color: var(--action-border); }
 .build-page .planner-slot { background: var(--canvas); }
 .build-page .planner-slot.rare, .build-page .planner-slot.unique { background: var(--canvas); }
 .planner-slot-label { background: var(--surface); }
-.planner-socket-count, .planner-jewel>small { background: var(--blue-200); }
-.app-shell .exchange-item-grid.exchange-item-grid .exchange-item.selected { background: var(--accent-soft); border-color: var(--blue-200); box-shadow: inset 3px 0 var(--blue-500); }
-.exchange-item-grid.exchange-item-grid .exchange-item:hover { background: var(--surface-hover); border-color: var(--blue-200); }
+.planner-socket-count, .planner-jewel>small { background: var(--action-filled); }
+.app-shell .exchange-item-grid.exchange-item-grid .exchange-item.selected { background: var(--accent-soft); border-color: var(--selection-line); box-shadow: inset 3px 0 var(--focus-ring); }
+.exchange-item-grid.exchange-item-grid .exchange-item:hover { background: var(--surface-hover); border-color: var(--line-strong); }
+
+/* Navigation and metadata recede; the active market remains the focal point. */
+.app-shell .sidebar { background: #11161e; border-right-color: var(--line); }
+.app-shell .topbar { background: var(--canvas); }
+.app-shell .data-health { background: transparent; border-color: var(--line); }
+.app-shell .market-ticker { background: var(--surface); }
+.app-shell .market-ticker > button.active { background: #202c3d; }
+.app-shell .market-panel { background: var(--surface); }
+.app-shell .market-panel-header, .app-shell .market-tabs, .app-shell .market-list-head { background: transparent; }
+.app-shell .market-search, .app-shell .market-category-trigger { background: var(--canvas); }
+.app-shell .market-row { background: transparent; }
+.app-shell .market-row:hover { background: var(--surface-hover); }
+.app-shell .market-row.selected { background: var(--accent-soft); }
+.app-shell .market-window .exchange-head, .app-shell .market-window .reward-head { background: var(--surface); }
+.app-shell .market-window .exchange-foot, .app-shell .market-window .reward-foot { background: var(--surface); }
+.app-shell .exchange-item-grid.exchange-item-grid .exchange-item { background: var(--surface); box-shadow: none; }
+.app-shell .exchange-item-grid.exchange-item-grid .exchange-item:hover { transform: none; box-shadow: none; }
+.app-shell .exchange-item-grid.exchange-item-grid .exchange-group h3 { border-bottom-color: var(--line-strong); }
+.planner-hero { background: var(--surface); }
+.planner-hero-foot { background: var(--canvas); }
+.build-page .planner-slot { border-color: var(--line-strong); }
+.build-page .planner-slot.rare { border-color: #807451; }
+.build-page .planner-slot.unique { border-color: #886645; }
+.planner-jewel { background: var(--canvas); }
+.build-page .planner-toc>a:hover { background: var(--surface-hover); }

@@ -1,30 +1,31 @@
 :root {
   color-scheme: dark;
-  /* Palette: https://colorhunt.co/palette/e3f2fd90caf92196f30d47a1 */
-  --blue-50: #e3f2fd;
-  --blue-200: #90caf9;
-  --blue-500: #2196f3;
-  --blue-900: #0d47a1;
-  --canvas: #0a367b;
-  --surface: var(--blue-900);
-  --surface-raised: #1252ae;
-  --surface-hover: #165eb9;
-  --line: #3574b8;
-  --line-strong: var(--blue-200);
+  /* Calm data interface: neutral layers; emphasis belongs to prices and selection. */
+  --canvas: #101318;
+  --surface: #171c24;
+  --surface-raised: #202631;
+  --surface-hover: #282f3b;
+  --line: #2b3340;
+  --line-strong: #414d60;
+  --selection-line: #708eb5;
+  --focus-ring: #80aaff;
+  --action-surface: #24364d;
+  --action-border: #8fa9cb;
+  --action-filled: #c5d5e9;
   --text: #eef3fb;
   --muted: #a7b6ca;
   --quiet: #8395ae;
   --accent: #80aaff;
-  --accent-soft: #174e96;
+  --accent-soft: #243145;
   --gold: #efd18d;
   --success: #79d5b1;
   --warning: #efd18d;
   --danger: #ff8596;
   --ink-on-accent: #0b121d;
-  --overlay: #062459aa;
-  --shadow-color: #041c4933;
-  --success-soft: #174e53;
-  --danger-soft: #572946;
+  --overlay: #06090dcc;
+  --shadow-color: #00000033;
+  --success-soft: #1d322d;
+  --danger-soft: #3b252e;
   --radius: 10px;
   --space: 8px;
   font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
