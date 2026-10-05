@@ -1,0 +1,13 @@
+{
+  "id": "/",
+  "name": "POE2 MARKET · 시세와 구매 시간",
+  "short_name": "POE2 시세",
+  "lang": "ko",
+  "description": "POE2 아이템 시세, 콘텐츠 보상과 요일·시간대 가격 관측 도구",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b121d",
+  "theme_color": "#0b121d",
+  "icons": [{"src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]
+}

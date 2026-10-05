@@ -4,9 +4,14 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "generate:content": "node scripts/generate-content.mjs",
+    "predev": "npm run generate:content",
     "dev": "vite --host 127.0.0.1",
+    "prebuild": "npm run generate:content",
     "build": "tsc -b && vite build",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "pretest": "npm run generate:content",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "lightweight-charts": "^5.2.1",

@@ -5,6 +5,7 @@ export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', 'POE_')
   return {
     plugins: [react()],
+    build: {rollupOptions: {input: {main: 'index.html', buildImport: 'build-import.html'}}},
     server: {proxy: {'/api': env.POE_API_PROXY_TARGET || 'http://127.0.0.1:8000'}},
   }
 })

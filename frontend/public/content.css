@@ -1,0 +1,62 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css');
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--canvas); color: var(--text); min-width: 0; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: #c9dcff; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.skip-link { position: fixed; z-index: 5; top: -80px; left: 12px; padding: 14px 20px; background: var(--accent); color: var(--canvas); border-radius: 5px; }
+.skip-link:focus { top: 12px; }
+header { display: flex; align-items: center; gap: 28px; min-height: 76px; padding: 16px max(24px, calc((100vw - 1120px) / 2)); border-bottom: 1px solid var(--line); background: var(--surface); }
+.brand { color: var(--text); font-size: 17px; font-weight: 800; letter-spacing: .02em; white-space: nowrap; }
+.brand span { color: var(--accent); font-size: 13px; }
+header nav { display: flex; gap: 20px; flex-wrap: wrap; }
+header nav a { color: var(--muted); font-size: 13px; }
+.dashboard-link { margin-left: auto; font-size: 13px; white-space: nowrap; border: 1px solid var(--line); background: var(--surface-raised); padding: 11px 14px; border-radius: 5px; }
+main { max-width: 1120px; margin: auto; padding: 52px 24px 72px; }
+.eyebrow { display: block; margin-bottom: 12px; font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--accent); }
+h1 { margin: 0 0 22px; font-size: clamp(28px, 3.3vw, 42px); line-height: 1.35; letter-spacing: -.04em; word-break: keep-all; }
+.guide-heading { margin-bottom: 36px; }
+.guide-heading p { color: var(--muted); font-size: 15px; line-height: 1.9; }
+.guide-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.guide-cards > a { display: flex; flex-direction: column; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); padding: 28px; min-height: 235px; }
+.guide-cards > a:hover { border-color: var(--accent); background: var(--surface-raised); }
+.guide-cards small { color: var(--accent); font-size: 12px; }
+.guide-cards h2 { color: var(--text); font-size: 21px; line-height: 1.5; margin: 16px 0 12px; letter-spacing: -.03em; }
+.guide-cards p { color: var(--muted); font-size: 14px; line-height: 1.8; margin: 0 0 22px; }
+.guide-cards span { margin-top: auto; font-size: 13px; }
+.guide-method { display: flex; justify-content: space-between; gap: 20px; align-items: center; padding: 26px; margin-top: 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.guide-method h2 { font-size: 18px; margin: 0 0 10px; }
+.guide-method p { color: var(--muted); margin: 0; font-size: 14px; line-height: 1.8; }
+.guide-method a { flex: none; font-size: 13px; }
+.article-header { max-width: 800px; margin-left: 242px; padding-bottom: 32px; }
+.article-header > a { display: block; font-size: 13px; margin-bottom: 32px; }
+.lede { font-size: 16px; line-height: 1.95; color: var(--muted); }
+.article-meta { font-size: 12px; color: var(--quiet); margin-top: 20px; }
+.article-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 32px; }
+.article-toc { align-self: start; position: sticky; top: 22px; display: flex; flex-direction: column; gap: 8px; padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.article-toc strong { font-size: 12px; margin-bottom: 5px; color: var(--quiet); }
+.article-toc a { font-size: 12px; line-height: 1.7; padding: 5px 0; color: var(--muted); }
+.article-toc a:hover { color: var(--accent); }
+article { min-width: 0; }
+article > section { padding: 6px 0 25px; margin-bottom: 25px; border-bottom: 1px solid var(--line); scroll-margin-top: 24px; }
+article h2 { font-size: 23px; line-height: 1.5; margin: 0 0 18px; letter-spacing: -.025em; word-break: keep-all; }
+article p { font-size: 15px; line-height: 2.05; color: #bdc9da; margin: 0 0 18px; overflow-wrap: break-word; }
+article ul { padding-left: 20px; line-height: 2; font-size: 14px; }
+.article-note { padding: 18px; background: var(--surface-raised); color: var(--muted); border: 1px solid var(--line); border-radius: 6px; line-height: 1.8; font-size: 13px; }
+.related { margin-top: 30px; }
+.related > strong { color: var(--muted); font-size: 13px; }
+.related > div { display: grid; gap: 10px; margin-top: 12px; }
+.related a { display: flex; flex-direction: column; gap: 8px; padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.related small { color: var(--quiet); font-size: 11px; }
+.related span { color: var(--text); font-size: 14px; }
+.ad-layout-preview { display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; min-height: 250px; margin-top: 48px; border: 1px dashed var(--line); border-radius: 6px; background: var(--surface); color: var(--quiet); }
+.ad-layout-preview small { font-size: 11px; }
+.ad-layout-preview span { font-size: 13px; text-align: center; }
+footer { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; border-top: 1px solid var(--line); padding: 36px max(24px, calc((100vw - 1120px) / 2)); background: var(--surface); }
+footer p { color: var(--quiet); font-size: 12px; line-height: 1.8; }
+footer nav { display: flex; justify-content: flex-end; gap: 16px; flex-wrap: wrap; align-content: start; }
+footer nav a { font-size: 12px; color: var(--muted); }
+footer > small { grid-column: 1/-1; color: var(--quiet); font-size: 11px; line-height: 1.8; }
+@media(max-width: 900px) { header { flex-wrap: wrap; gap: 16px; } header nav { order: 3; width: 100%; } .article-header { margin-left: 0; } .article-layout { grid-template-columns: minmax(0, 1fr); } .article-toc { position: static; } }
+@media(max-width: 600px) { main { padding: 32px 18px 48px; } header { padding: 16px 18px; } header nav { gap: 14px; } header nav a { font-size: 12px; } h1 { font-size: 28px; } .guide-cards { grid-template-columns: 1fr; } .guide-cards > a { padding: 22px; } .guide-method { flex-direction: column; align-items: start; padding: 22px; } article h2 { font-size: 21px; } article p { font-size: 15px; } footer { padding: 28px 18px; grid-template-columns: 1fr; } footer nav { justify-content: flex-start; } }
+@media(prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }

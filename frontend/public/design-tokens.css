@@ -1,0 +1,23 @@
+:root {
+  color-scheme: dark;
+  --canvas: #0b121d;
+  --surface: #111a28;
+  --surface-raised: #172235;
+  --surface-hover: #1c2c43;
+  --line: #2a3a50;
+  --text: #eef3fb;
+  --muted: #a7b6ca;
+  --quiet: #8395ae;
+  --accent: #80aaff;
+  --accent-soft: #1e3554;
+  --gold: #efd18d;
+  --success: #79d5b1;
+  --warning: #efd18d;
+  --danger: #ff8596;
+  --radius: 10px;
+  --space: 8px;
+  font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  background: var(--canvas);
+  color: var(--text);
+  font-synthesis: none;
+}

@@ -26,6 +26,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from overlay_prices import OverlayRequest, SnapshotStore, overlay_response
 from item_sources import InspectItem, inspect_item, init_source_tables, save_catalog, combined_catalog
+from build_import import router as build_router
 
 BASE = "https://poe.ninja/poe2/api/economy"
 EXCHANGE_TYPES = {
@@ -1116,6 +1117,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="PoE2 Chart API", lifespan=lifespan)
+app.include_router(build_router)
 app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
                    allow_methods=["GET", "POST"], allow_headers=["*"],

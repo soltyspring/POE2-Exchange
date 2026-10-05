@@ -285,7 +285,7 @@ export function MarketPrice({
         {formatted.fraction && (
           <span
             className="market-price-fraction"
-            style={{color: 'var(--market-price-fraction-color, #7b8798)'}}
+            style={{color: formatted.value != null && formatted.value < 1 ? 'inherit' : 'var(--market-price-fraction-color, #7b8798)'}}
           >
             {formatted.fraction}
           </span>

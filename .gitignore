@@ -8,6 +8,14 @@ data/*.sqlite3*
 data/icon_cache/
 *.log
 runtime/
+frontend/public/guide/
+frontend/public/about.html
+frontend/public/contact.html
+frontend/public/methodology.html
+frontend/public/privacy.html
+frontend/public/terms.html
+frontend/public/robots.txt
+frontend/public/sitemap.xml
 .env
 .env.*
 !.env.example
