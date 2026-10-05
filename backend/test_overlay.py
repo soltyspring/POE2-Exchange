@@ -47,6 +47,8 @@ class OverlayTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 200)
         items = response.json()['items']
         self.assertEqual(items['unique']['priceExalted'], 200)
+        self.assertEqual(items['unique']['id'], 'u1')
+        self.assertIsNone(items['rare']['id'])
         self.assertEqual(items['rare']['name'], '슬픔의 발 사이렌 장갑')
         for key in ('rare', 'gem', 'map'):
             self.assertEqual(items[key]['state'], 'missing')

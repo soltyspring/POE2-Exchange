@@ -91,6 +91,7 @@ def quotes(payload, snapshot, now):
         state = 'missing' if row is None else ('ready' if 0 <= now - row['observed_at'] <= 1800 else 'stale')
         price_kind = 'unique_reference' if unique else 'tablet_reference' if tablet else 'consumable_reference' if consumable else None
         results[item.key] = dict(
+            id=row['id'] if row else None,
             name=item.name, baseType=item.baseType, kind=item.kind, variant=row.get('variant') if row else item.variant,
             priceExalted=row['price_divine'] * rate if state == 'ready' and rate else None,
             priceDivine=row['price_divine'] if state == 'ready' else None,
