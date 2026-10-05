@@ -19,11 +19,12 @@ from urllib.parse import quote, unquote, urlsplit
 from zoneinfo import ZoneInfo
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
+from overlay_prices import OverlayRequest, SnapshotStore, overlay_response
 
 BASE = "https://poe.ninja/poe2/api/economy"
 EXCHANGE_TYPES = {
@@ -37,6 +38,8 @@ STASH_TYPES = {
     "UniqueWeapons": "고유 무기", "UniqueArmours": "고유 방어구",
     "UniqueAccessories": "고유 장신구", "UniqueFlasks": "고유 플라스크",
     "UniqueJewels": "고유 주얼", "UniqueCharms": "고유 부적",
+    "UniqueSanctumRelics": "고유 유물", "UniqueTablets": "고유 서판",
+    "PrecursorTablets": "선대 서판",
 }
 CATEGORIES = {**EXCHANGE_TYPES, **STASH_TYPES}
 ROOT = Path(__file__).resolve().parent.parent
@@ -84,6 +87,8 @@ LOCALIZATION_DIR = ROOT / "data"
 ICON_CACHE_DIR = ROOT / "data" / "icon_cache"
 KOREAN_NAMES: dict[str, str] = {}
 LOGGER = logging.getLogger(__name__)
+overlay_snapshots = SnapshotStore()
+collection_tasks: dict[str, asyncio.Task] = {}
 
 
 def connect():
@@ -172,6 +177,11 @@ def init_db():
           listing_count INTEGER, trend_percent REAL, source_kind TEXT NOT NULL,
           observed_at INTEGER NOT NULL, changed_at INTEGER NOT NULL,
           PRIMARY KEY (league, id)
+        );
+        CREATE TABLE IF NOT EXISTS market_metadata (
+          league TEXT NOT NULL, market_id TEXT NOT NULL,
+          variant TEXT, details_id TEXT, item_level INTEGER, corrupted INTEGER,
+          PRIMARY KEY (league, market_id)
         );
         CREATE TABLE IF NOT EXISTS observations (
           league TEXT NOT NULL, market_id TEXT NOT NULL, minute INTEGER NOT NULL,
@@ -398,7 +408,9 @@ def normalize(category: str, payload: dict, scout_items: dict | None = None):
         rows.append((market_id, category, CATEGORIES[category], korean_name(line.get("name") or "Unknown"),
                      normalized_icon(line.get("icon")), korean_name(line.get("baseType")), price,
                      None, line.get("listingCount"),
-                     (line.get("sparkLine") or {}).get("totalChange"), "stash", now, len(rows)))
+                     (line.get("sparkLine") or {}).get("totalChange"), "stash", now, len(rows),
+                     {"variant": line.get("variant"), "details_id": line.get("detailsId"),
+                      "item_level": line.get("levelRequired"), "corrupted": int(bool(line.get("corrupted")))}))
     return rows
 
 
@@ -425,10 +437,20 @@ def save_markets(league: str, rows: list[tuple]):
             db.execute("""INSERT INTO market_display_order VALUES (?,?,?)
                 ON CONFLICT(league,market_id) DO UPDATE SET display_order=excluded.display_order""",
                 (league, row[0], display_order))
+            metadata = row[13] if len(row) > 13 else {}
+            db.execute("""INSERT INTO market_metadata VALUES (?,?,?,?,?,?)
+                ON CONFLICT(league,market_id) DO UPDATE SET
+                variant=excluded.variant,details_id=excluded.details_id,
+                item_level=excluded.item_level,corrupted=excluded.corrupted""",
+                (league, row[0], metadata.get('variant'), metadata.get('details_id'),
+                 metadata.get('item_level'), metadata.get('corrupted')))
         db.executemany("DELETE FROM markets WHERE league=? AND id=?",
                        ((league, stale_id) for stale_id in previous_ids - current_ids))
         db.executemany("DELETE FROM market_display_order WHERE league=? AND market_id=?",
                        ((league, stale_id) for stale_id in previous_ids - current_ids))
+        db.executemany("DELETE FROM market_metadata WHERE league=? AND market_id=?",
+                       ((league, stale_id) for stale_id in previous_ids - current_ids))
+    overlay_snapshots.invalidate(league)
 
 
 def enrich_exchange_metadata(league: str, scout_items: dict):
@@ -842,8 +864,13 @@ class Collector:
         return {**quote_data, "price_exalted": price_exalted, "price_divine": price_divine}
 
     async def get_leagues(self):
-        if self.leagues and time.time() - self.last_leagues_at < LEAGUE_CACHE_SECONDS:
+        if self.leagues:
+            if time.time() - self.last_leagues_at >= LEAGUE_CACHE_SECONDS:
+                schedule_league_refresh()
             return self.leagues
+        return await self.refresh_leagues()
+
+    async def refresh_leagues(self):
         response = await self._get_with_backoff(f"{BASE}/leagues")
         response.raise_for_status()
         self.leagues = response.json()
@@ -940,6 +967,9 @@ class Collector:
             await asyncio.to_thread(sample_prices)
             if categories is None and refreshed:
                 await asyncio.to_thread(sample_market_snapshots, league, now)
+            if refreshed:
+                overlay_snapshots.invalidate(league)
+                await asyncio.to_thread(overlay_snapshots.get, league, connect)
             return {"refreshed": sorted(refreshed), "cached": cached}
 
     async def refresh_market(self, league: str, market_id: str, force: bool = False):
@@ -955,6 +985,39 @@ class Collector:
 
 collector = Collector()
 scout_cache: dict[tuple[str, str], tuple[float, dict]] = {}
+
+
+def schedule_job(key, operation):
+    task = collection_tasks.get(key)
+    if task is None or task.done():
+        async def run():
+            try:
+                await operation()
+            except Exception:
+                LOGGER.exception("Background collection failed: %s", key)
+        collection_tasks[key] = asyncio.create_task(run())
+
+
+def schedule_league_refresh():
+    schedule_job('leagues', collector.refresh_leagues)
+
+
+def schedule_collection(league):
+    schedule_job('market:' + league, lambda: collector.refresh(league))
+
+
+async def overlay_prices(payload: OverlayRequest, request: Request):
+    try:
+        valid = await collector.get_leagues()
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, f"League source unavailable: {exc}") from exc
+    if payload.league not in {item['id'] for item in valid}:
+        raise HTTPException(400, 'Unknown league')
+    snapshot, db_ms, cache_ms = await asyncio.to_thread(
+        overlay_snapshots.get, payload.league, connect)
+    if not snapshot[0]:
+        schedule_collection(payload.league)
+    return overlay_response(payload, snapshot, request, db_ms, cache_ms)
 
 
 async def sample_loop():
@@ -1018,14 +1081,19 @@ async def lifespan(app: FastAPI):
     yield
     for task in tasks:
         task.cancel()
+    for task in collection_tasks.values():
+        task.cancel()
     await asyncio.gather(*tasks, return_exceptions=True)
+    await asyncio.gather(*collection_tasks.values(), return_exceptions=True)
     await collector.close()
 
 
 app = FastAPI(title="PoE2 Chart API", lifespan=lifespan)
 app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
-                   allow_methods=["GET", "POST"], allow_headers=["*"])
+                   allow_methods=["GET", "POST"], allow_headers=["*"],
+                   expose_headers=["ETag", "Server-Timing"])
+app.add_api_route('/api/overlay/prices', overlay_prices, methods=['POST'])
 
 
 @app.get("/api/leagues")
@@ -1053,12 +1121,14 @@ async def markets(league: str = Query(min_length=1)):
     with connect() as db:
         has_market = db.execute("SELECT 1 FROM markets WHERE league=? LIMIT 1", (league,)).fetchone()
     if not has_market:
-        await collector.refresh(league, force=True, min_interval=0)
+        schedule_collection(league)
     now = int(time.time())
     with connect() as db:
-        items = [dict(row) for row in db.execute("""SELECT m.*,COALESCE(o.display_order,999999) AS display_order
+        items = [dict(row) for row in db.execute("""SELECT m.*,d.variant,d.details_id,
+            d.item_level AS level_required,d.corrupted,COALESCE(o.display_order,999999) AS display_order
             FROM markets m LEFT JOIN market_display_order o
               ON o.league=m.league AND o.market_id=m.id
+            LEFT JOIN market_metadata d ON d.league=m.league AND d.market_id=m.id
             WHERE m.league=? ORDER BY m.category,display_order,m.id""", (league,))]
         states = [dict(row) for row in db.execute(
             "SELECT category,fetched_at,attempted_at,error,etag,last_modified FROM fetch_state WHERE league=?",
@@ -1067,7 +1137,8 @@ async def markets(league: str = Query(min_length=1)):
             WHERE league=? AND id='exchange:Currency:exalted'""", (league,)).fetchone()
     cooldown = collector.host_retry_at.get(urlsplit(BASE).netloc, 0)
     states = [source_status_view(state, MARKET_POLL_SECONDS, now, cooldown) for state in states]
-    return {"markets": items, "categories": CATEGORIES, "source_status": states,
+    return {"markets": items, "state": "ready" if items else "collecting",
+            "categories": CATEGORIES, "source_status": states,
             "exalted_per_divine": round(1 / exalted[0], 4) if exalted else None,
             "sample_interval_seconds": 60,
             "history_snapshot_seconds": HISTORY_SNAPSHOT_SECONDS,

@@ -25,6 +25,7 @@ export type ComparisonMarket = {
   observed_at: number
   changed_at: number
   display_order?: number
+  variant?: string | null
 }
 
 type SparklinePoint = {time: number; price_divine: number; samples: number}
@@ -43,9 +44,11 @@ type ExchangeSort = 'game' | 'name' | 'price' | 'change' | 'liquidity'
 const GENERAL_CATEGORIES = [
   'Currency', 'Fragments', 'Abyss', 'UncutGems', 'LineageSupportGems', 'Essences',
   'SoulCores', 'Idols', 'Runes', 'Ritual', 'Expedition', 'Delirium', 'Breach', 'Verisium',
+  'PrecursorTablets',
 ]
 const EQUIPMENT_CATEGORIES = [
   'UniqueWeapons', 'UniqueArmours', 'UniqueAccessories', 'UniqueFlasks', 'UniqueCharms', 'UniqueJewels',
+  'UniqueSanctumRelics', 'UniqueTablets',
 ]
 const CURRENCY_GAME_ORDER = [
   'transmute', 'greater-orb-of-transmutation', 'perfect-orb-of-transmutation',
@@ -58,6 +61,7 @@ const CURRENCY_GAME_ORDER = [
   'chance-shard', 'artificers-shard', 'whetstone', 'scrap', 'gcp', 'bauble',
 ]
 const PAGE_SIZE = 60
+const VARIANT_LABELS: Record<string, string> = {Normal: '일반', Magic: '마법', Rare: '희귀'}
 
 const compactNumber = (value: number) => new Intl.NumberFormat('ko-KR', {
   notation: Math.abs(value) >= 1000 ? 'compact' : 'standard',
@@ -294,7 +298,7 @@ export function MarketComparison({
             <div className="market-comparison-rows" role="rowgroup">
               {visible.map(market => <div key={market.id} className={market.id === selectedId ? 'market-comparison-row selected' : 'market-comparison-row'} role="row" aria-selected={market.id === selectedId} tabIndex={0} onClick={() => onSelect(market.id)} onKeyDown={event => {if (event.key === 'Enter' || event.key === ' ') {event.preventDefault(); onSelect(market.id)}}}>
                 <button className={favorites.includes(market.id) ? 'comparison-favorite saved' : 'comparison-favorite'} aria-label={market.name + (favorites.includes(market.id) ? ' 관심 해제' : ' 관심 등록')} onClick={event => {event.stopPropagation(); onToggleFavorite(market.id)}}><Star size={16} fill={favorites.includes(market.id) ? 'currentColor' : 'none'}/></button>
-                <div className="comparison-item" role="cell">{icon(market)}<span><strong>{market.name}</strong><small>{market.category_label + (market.base_type ? ' · ' + market.base_type : '')}</small></span></div>
+                <div className="comparison-item" role="cell">{icon(market)}<span><strong>{market.name}</strong><small>{market.category_label + (market.base_type ? ' · ' + market.base_type : '') + (market.variant ? ' · ' + (VARIANT_LABELS[market.variant] || market.variant) : '')}</small></span></div>
                 <div className="comparison-price" role="cell"><MarketPrice market={market} rates={referenceRates} mode={priceMode}/>{priceMode === 'adaptive' && <small>자동 환산</small>}</div>
                 <div role="cell"><MarketSparkline history={histories[market.id]} trend={market.trend_percent}/></div>
                 <div role="cell"><MarketActivity market={market}/></div>
