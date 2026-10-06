@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises'
 import ts from 'typescript'
 const source=await readFile(new URL('../src/runeshapeModel.ts',import.meta.url),'utf8')
 const output=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText
-const {remainingRunes,runeSelectionLimit,matchRuneInventory,compareRuneCandidates}=await import('data:text/javascript;base64,'+Buffer.from(output).toString('base64'))
+const {remainingRunes,runeSelectionLimit,matchRuneInventory,compareRuneCandidates,hasExcludedRune}=await import('data:text/javascript;base64,'+Buffer.from(output).toString('base64'))
 const data=JSON.parse(await readFile(new URL('../src/runeshapes.json',import.meta.url),'utf8'))
 test('sequence matching preserves order and rejects extra runes',()=>{
  assert.deepEqual(remainingRunes(['a','b','a'],['a','b'],'sequence'),['a'])
@@ -57,4 +57,45 @@ test('adding a rune cannot remove existing inventory-related candidates',()=>{
  const candidates=pool=>data.recipes.filter(r=>matchRuneInventory(r.runes,pool).matched>0).map(r=>r.id)
  const before=candidates(['Fire_Rune']);const after=new Set(candidates(['Fire_Rune','Cold_Rune','Stone_Rune']))
  assert.ok(before.every(id=>after.has(id)))
+})
+
+test('all 322 recipes agree with independent count arithmetic for full, partial and extra inventory',()=>{
+ let seed=7
+ const random=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296)
+ const counts=values=>values.reduce((map,id)=>map.set(id,(map.get(id)||0)+1),new Map())
+ for(const recipe of data.recipes){
+  const inventories=[[],recipe.runes,[...recipe.runes].reverse(),[...recipe.runes,...data.runes.map(r=>r.id)],recipe.runes.slice(0,-1)]
+  for(let n=0;n<30;n++)inventories.push(Array.from({length:Math.floor(random()*41)},()=>data.runes[Math.floor(random()*data.runes.length)].id))
+  for(const inventory of inventories){
+   const result=matchRuneInventory(recipe.runes,inventory), required=counts(recipe.runes),owned=counts(inventory)
+   const expected=[...required].flatMap(([id,count])=>Array(Math.max(0,count-(owned.get(id)||0))).fill(id)).sort()
+   assert.deepEqual([...result.remaining].sort(),expected)
+   assert.equal(result.matched+result.remaining.length,recipe.runes.length)
+   assert.equal(result.available.filter(Boolean).length,result.matched)
+   assert.equal(result.remaining.length===0,[...required].every(([id,count])=>(owned.get(id)||0)>=count))
+  }
+ }
+})
+
+test('Soul + Toxic candidates survive adding Prismatic, including Void Flux',()=>{
+ const pair=['Soul_Rune','Toxic_Rune'], pool=[...pair,'Prismatic_Rune']
+ const recipes=data.recipes.filter(r=>r.runes.includes(pair[0])&&r.runes.includes(pair[1])&&!r.runes.includes('Prismatic_Rune'))
+ assert.equal(recipes.length,4)
+ for(const recipe of recipes){
+  assert.deepEqual(matchRuneInventory(recipe.runes,pool),matchRuneInventory(recipe.runes,pair))
+  assert.equal(matchRuneInventory(recipe.runes,pool).matched,2)
+ }
+ const flux=data.recipes.find(r=>r.name==='공허 유동체')
+ assert.deepEqual(matchRuneInventory(flux.runes,pool).remaining,['Time_Rune','Adaptive_Rune','Power_Rune','Death_Rune'])
+})
+
+test('excluded runes reject recipes even when inventory completes them',()=>{
+ assert.equal(hasExcludedRune(['a','b','a'],['a']),true)
+ assert.equal(hasExcludedRune(['a','b'],['c']),false)
+ assert.equal(hasExcludedRune(['a','b'],[]),false)
+ const inventory=['Soul_Rune','Toxic_Rune','Prismatic_Rune']
+ const candidates=data.recipes.filter(r=>matchRuneInventory(r.runes,inventory).matched>0&&!hasExcludedRune(r.runes,['Prismatic_Rune']))
+ assert.ok(candidates.length>0)
+ assert.ok(candidates.every(r=>!r.runes.includes('Prismatic_Rune')))
+ assert.ok(candidates.some(r=>r.name==='공허 유동체'))
 })

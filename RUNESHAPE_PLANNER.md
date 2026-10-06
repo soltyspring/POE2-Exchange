@@ -12,3 +12,5 @@ Prices come from the selected league's existing market response, multiplied by r
 The planner and recipe data are loaded on demand. Existing exchange layouts are unchanged. Run `npm test` and `npm run build` in frontend. UI verified at desktop and 390px mobile widths.
 
 Recommendation: fewest missing runes, then highest known total reward price. Highlight the highest-valued complete recipe and up to two closest incomplete targets. No drop probability or expected profit is calculated. Candidates are independent alternatives, not a simultaneous inventory allocation. Inventory is no longer capped at ten; individual recipes still have 2–10 slots. Existing per-rune duplicate limits remain. Show thirty results initially with a load-more control.
+
+Right-click a rune to toggle exclusion. Excluding removes owned copies and hides every recipe requiring that rune. Click its excluded chip to release it, or left-click the rune to own it again. A touch-friendly exclusion mode provides the same action. Exclusions persist in tab sessionStorage; New Map clears both lists.

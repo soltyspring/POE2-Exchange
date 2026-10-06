@@ -23,3 +23,7 @@ export function matchRuneInventory(recipe:string[], inventory:string[]) {
 export function compareRuneCandidates(a:{remaining:string[];price:number|null;matched:number},b:{remaining:string[];price:number|null;matched:number}) {
   return a.remaining.length-b.remaining.length || (b.price??-1)-(a.price??-1) || b.matched-a.matched
 }
+
+export function hasExcludedRune(recipe:string[], excluded:string[]): boolean {
+  return recipe.some(rune=>excluded.includes(rune))
+}
