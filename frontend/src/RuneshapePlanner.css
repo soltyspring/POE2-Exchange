@@ -1,1 +1,66 @@
-.runeshape-planner{position:fixed;inset:0;z-index:1000;background:var(--canvas);color:var(--text);display:flex;flex-direction:column;outline:0}.runeshape-planner>header{display:flex;justify-content:space-between;align-items:center;padding:20px 28px;background:var(--surface);border-bottom:1px solid var(--line);gap:16px}.runeshape-planner h2{margin:0;font-size:22px}.runeshape-planner p{font-size:13px;line-height:1.7;color:var(--muted)}.runeshape-layout{display:grid;grid-template-columns:300px minmax(0,1fr);min-height:0;flex:1}.runeshape-layout>aside{padding:22px;background:var(--surface);border-right:1px solid var(--line);overflow:auto}.runeshape-layout>.runeshape-content{padding:24px;overflow:auto;min-width:0}.runeshape-planner label{display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--muted)}.runeshape-planner input,.runeshape-planner select{min-width:0;height:40px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--text);font:inherit}.rune-options{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}.rune-options button{padding:8px;min-width:0;justify-content:flex-start;color:var(--text);font:inherit;font-size:12px}.rune-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap}.rune-chip img{width:27px;height:27px;object-fit:contain}.rune-entry-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.rune-entry-head h3{margin:0 auto 0 0;font-size:16px}.rune-entry-head h3 small{color:var(--quiet);font-size:12px}.rune-entered{display:flex;gap:8px;flex-wrap:wrap;min-height:70px;margin:16px 0;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:8px}.rune-entered button{display:flex;align-items:center;gap:7px;background:var(--accent-soft);color:var(--text);border:1px solid var(--line);border-radius:5px;padding:6px}.rune-filters{display:flex;gap:12px;flex-wrap:wrap}.rune-filters input[type=number]{width:90px}.rune-results-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:24px 0 14px;font-size:14px}.rune-results-head span{color:var(--muted);font-size:12px}.rune-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.rune-results article{min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px}.rune-reward{display:flex;justify-content:space-between;gap:12px;font-size:14px}.rune-reward small{display:block;color:var(--quiet);font-size:11px;line-height:1.6;margin-top:6px}.rune-reward>div:last-child{text-align:right;font-size:13px}.rune-recipe{display:flex;gap:8px;flex-wrap:wrap;padding:16px 0}.rune-recipe>span{display:flex;gap:4px;align-items:center}.rune-recipe>span>small{color:var(--quiet);font-size:10px}.rune-missing{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:12px}.rune-missing>strong{font-size:12px;color:var(--accent)}.rune-empty{grid-column:1/-1;padding:30px;border:1px dashed var(--line);border-radius:8px}.runeshape-planner .rune-help{font-size:11px}.runeshape-layout a{color:var(--accent)}@media(max-width:1100px){.rune-results{grid-template-columns:1fr}}@media(max-width:700px){.runeshape-layout{display:block;overflow:auto}.runeshape-layout>aside,.runeshape-layout>.runeshape-content{overflow:visible;padding:16px}.runeshape-layout>aside{border-right:0;border-bottom:1px solid var(--line)}.rune-options{grid-template-columns:repeat(3,minmax(0,1fr));max-height:180px;overflow:auto}.rune-options .rune-chip{font-size:11px;white-space:normal}.rune-options .rune-chip img{width:22px;height:22px}.runeshape-planner>header{padding:14px 16px}.runeshape-planner h2{font-size:19px}.rune-reward{flex-wrap:wrap}.rune-reward>div:last-child{text-align:left}}
+.runeshape-planner {
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--canvas); color: var(--text);
+  display: flex; flex-direction: column; outline: 0;
+  font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-size: 16px; line-height: 1.5;
+}
+.runeshape-planner > header { display:flex; justify-content:space-between; align-items:center; padding:22px 28px; background:var(--surface); border-bottom:1px solid var(--line); gap:16px; }
+.runeshape-planner h2 { margin:0; font-size:28px; letter-spacing:-.03em; }
+.runeshape-planner p { font-size:15px; line-height:1.7; color:var(--muted); }
+.runeshape-planner > header p { margin:6px 0 0; }
+.runeshape-layout { display:grid; grid-template-columns:370px minmax(0,1fr); min-height:0; flex:1; }
+.runeshape-layout > aside { padding:24px; background:var(--surface); border-right:1px solid var(--line); overflow:auto; }
+.runeshape-layout > .runeshape-content { padding:28px; overflow:auto; min-width:0; }
+.runeshape-planner label { display:flex; flex-direction:column; gap:8px; font-size:14px; font-weight:600; color:var(--muted); }
+.runeshape-planner input,.runeshape-planner select { min-width:0; height:48px; padding:10px 12px; border:1px solid var(--line-strong); border-radius:8px; background:var(--surface); color:var(--text); font:inherit; font-size:15px; }
+.runeshape-planner button { font-family:inherit; cursor:pointer; }
+.runeshape-planner .ui-button { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px; padding:10px 14px; font-size:15px; font-weight:600; color:var(--text); }
+.runeshape-planner button:disabled { cursor:default; opacity:.5; }
+.runeshape-planner button:focus-visible { outline:2px solid var(--focus-ring); outline-offset:3px; }
+.rune-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:18px; }
+.runeshape-planner .rune-options button { min-height:60px; padding:10px; min-width:0; justify-content:flex-start; text-align:left; border-color:var(--line-strong); border-radius:9px; }
+.rune-chip { display:inline-flex; align-items:center; gap:9px; padding:8px 12px; border:1px solid var(--line-strong); border-radius:8px; background:var(--surface-raised); font-size:16px; font-weight:600; line-height:1.4; color:var(--text); }
+.rune-chip img { width:32px; height:32px; object-fit:contain; flex:none; }
+.rune-options .rune-chip,.rune-entered .rune-chip { padding:0; border:0; background:transparent; }
+.rune-entry-head { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.rune-entry-head h3 { margin:0 auto 0 0; font-size:20px; }
+.rune-entry-head h3 small { margin-left:8px; color:var(--muted); font-size:15px; }
+.rune-entered { display:flex; gap:10px; flex-wrap:wrap; align-items:center; min-height:84px; margin:18px 0 24px; padding:18px; background:var(--surface); border:1px solid var(--line-strong); border-radius:10px; }
+.rune-entered button { display:flex; align-items:center; gap:10px; min-height:52px; background:var(--accent-soft); color:var(--text); border:1px solid var(--selection-line); border-radius:8px; padding:10px 12px; }
+.rune-entered button > small { font-size:14px; font-weight:700; }
+.rune-entered p { margin:0; }
+.rune-filters { display:flex; gap:14px; flex-wrap:wrap; }
+.rune-filters input[type=number] { width:100px; }
+.rune-results-head { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin:28px 0 18px; font-size:20px; }
+.rune-results-head span { color:var(--muted); font-size:14px; }
+.rune-results { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+.rune-results article { min-width:0; background:var(--surface); border:1px solid var(--line-strong); border-radius:12px; padding:22px; }
+.rune-reward { display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; font-size:19px; }
+.rune-reward small { display:block; color:var(--muted); font-size:13px; line-height:1.6; margin-top:7px; }
+.rune-reward > div:last-child { text-align:right; font-size:19px; margin-left:auto; }
+.rune-recipe { display:flex; gap:10px; flex-wrap:wrap; padding:22px 0; }
+.rune-recipe > span { display:flex; gap:7px; align-items:center; }
+.rune-recipe > span > small { color:var(--muted); font-size:13px; font-weight:700; min-width:16px; text-align:center; }
+.rune-missing { display:flex; gap:10px; align-items:center; flex-wrap:wrap; border-top:1px solid var(--line); padding-top:18px; }
+.rune-missing > strong { font-size:16px; color:var(--accent); margin-right:4px; }
+.rune-missing .rune-chip { background:var(--accent-soft); border-color:var(--selection-line); }
+.rune-empty { grid-column:1/-1; padding:30px; border:1px dashed var(--line-strong); border-radius:10px; }
+.runeshape-planner .rune-help { font-size:13px; }
+.runeshape-layout a { color:var(--accent); }
+@media(max-width:1400px) { .rune-results { grid-template-columns:1fr; } }
+@media(max-width:900px) { .runeshape-layout { grid-template-columns:310px minmax(0,1fr); } .runeshape-layout > aside { padding:18px; } .rune-options { grid-template-columns:1fr; } .runeshape-layout > .runeshape-content { padding:20px; } }
+@media(max-width:700px) {
+  .runeshape-layout { display:block; overflow:auto; }
+  .runeshape-layout > aside,.runeshape-layout > .runeshape-content { overflow:visible; padding:18px 16px; }
+  .runeshape-layout > aside { border-right:0; border-bottom:1px solid var(--line); }
+  .rune-options { grid-template-columns:repeat(2,minmax(0,1fr)); max-height:240px; overflow:auto; }
+  .runeshape-planner > header { padding:16px; }
+  .runeshape-planner h2 { font-size:24px; }
+  .runeshape-planner > header p { font-size:14px; }
+  .rune-results article { padding:18px; }
+  .rune-reward > div:last-child { text-align:left; margin-left:0; }
+  .rune-filters { gap:12px; }
+  .rune-filters label { max-width:100%; }
+  .rune-filters input,.rune-filters select { max-width:100%; }
+}
