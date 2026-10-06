@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises'
 import ts from 'typescript'
 const source=await readFile(new URL('../src/runeshapeModel.ts',import.meta.url),'utf8')
 const output=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText
-const {remainingRunes}=await import('data:text/javascript;base64,'+Buffer.from(output).toString('base64'))
+const {remainingRunes,runeSelectionLimit}=await import('data:text/javascript;base64,'+Buffer.from(output).toString('base64'))
 const data=JSON.parse(await readFile(new URL('../src/runeshapes.json',import.meta.url),'utf8'))
 test('sequence matching preserves order and rejects extra runes',()=>{
  assert.deepEqual(remainingRunes(['a','b','a'],['a','b'],'sequence'),['a'])
@@ -26,4 +26,12 @@ test('source snapshot contains complete valid combinations with unique IDs',()=>
  const mirror=data.recipes.find(r=>r.name==='칼란드라의 거울')
  assert.ok(mirror)
  assert.deepEqual(remainingRunes(mirror.runes,mirror.runes,'sequence'),[])
+})
+
+test('duplicate selection limits follow actual recipes, including special ten-rune recipe',()=>{
+ assert.equal(runeSelectionLimit(data.recipes,'Fire_Rune'),1)
+ assert.equal(runeSelectionLimit(data.recipes,'Rage_Rune'),2)
+ const bait=data.runes.find(r=>r.name==='Bait Rune')
+ assert.equal(runeSelectionLimit(data.recipes,bait.id),10)
+ assert.equal(runeSelectionLimit(data.recipes,'unknown'),0)
 })

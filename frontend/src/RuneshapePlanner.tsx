@@ -1,22 +1,31 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { X, Undo2, RotateCcw } from 'lucide-react'
 import data from './runeshapes.json'
-import { remainingRunes } from './runeshapeModel'
+import { remainingRunes, runeSelectionLimit } from './runeshapeModel'
 import { useMarketDialog } from './useMarketDialog'
 import { UiButton } from './ui'
 import './RuneshapePlanner.css'
 
 type Quote = {name: string; price_divine: number; observed_at: number}
 const byId = new Map(data.runes.map(r=>[r.id,r]))
+const runeLimits=new Map(data.runes.map(r=>[r.id,runeSelectionLimit(data.recipes,r.id)]))
 function Rune({id}: {id:string}) { const rune=byId.get(id); return <span className="rune-chip"><img src={rune?.icon} alt="" loading="lazy"/>{rune?.name || id}</span> }
 export function RuneshapePlanner({onClose,markets}: {onClose:()=>void; markets: Quote[]}) {
   const ref=useRef<HTMLElement>(null)
   useMarketDialog(true,onClose,ref)
-  const [entered,setEntered]=useState<string[]>(()=>{try {const stored=JSON.parse(sessionStorage.getItem('runeshape-entered') || '[]'); return Array.isArray(stored) ? stored.filter((r:unknown)=>typeof r==='string'&&byId.has(r)).slice(0,10) : []}catch{return []}})
+  const [entered,setEntered]=useState<string[]>(()=>{try {const stored=JSON.parse(sessionStorage.getItem('runeshape-entered') || '[]'); return Array.isArray(stored) ? stored.filter((r:unknown,i:number,all:unknown[])=>typeof r==='string'&&byId.has(r)&&all.slice(0,i+1).filter(value=>value===r).length<=(runeLimits.get(r)||0)).slice(0,10) : []}catch{return []}})
   const [query,setQuery]=useState(''), [reward,setReward]=useState(''), [mode,setMode]=useState<'sequence'|'contains'>('sequence')
   const [level,setLevel]=useState(''), [slots,setSlots]=useState(''), [sort,setSort]=useState('remaining')
-  const change=useCallback((values:string[])=>{setEntered(values);try{sessionStorage.setItem('runeshape-entered',JSON.stringify(values))}catch{/* Storage may be unavailable */}},[])
-  const add=(id:string)=>{if(entered.length<10){change([...entered,id]);setQuery('')}}
+  const [selectionError,setSelectionError]=useState('')
+  const change=useCallback((values:string[])=>{setSelectionError('');setEntered(values);try{sessionStorage.setItem('runeshape-entered',JSON.stringify(values))}catch{/* Storage may be unavailable */}},[])
+  const add=(id:string)=>{
+    const limit=runeLimits.get(id)||0
+    if(entered.filter(rune=>rune===id).length>=limit){
+      setSelectionError(`${byId.get(id)?.name}: ${limit===1?'중복 선택할 수 없습니다. 조합표에 같은 룬을 두 번 사용하는 조합이 없습니다.':`최대 ${limit}개까지 선택할 수 있습니다.`}`)
+      return
+    }
+    if(entered.length<10){change([...entered,id]);setQuery('')}
+  }
   const quotes=useMemo(()=>{
     const unique=new Map<string,Quote>(), ambiguous=new Set<string>()
     for(const quote of markets){if(unique.has(quote.name))ambiguous.add(quote.name);unique.set(quote.name,quote)}
@@ -35,10 +44,11 @@ export function RuneshapePlanner({onClose,markets}: {onClose:()=>void; markets: 
     <div className="runeshape-layout"><aside>
       <label>룬 이름 검색<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="예: 화염, 지혜, 권능" onKeyDown={e=>{if(e.key==='Enter'&&choices.length===1){e.preventDefault();add(choices[0].id)}}}/></label>
       <div className="rune-options">{choices.map(r=><UiButton key={r.id} disabled={entered.length>=10} onClick={()=>add(r.id)}><Rune id={r.id}/></UiButton>)}{!choices.length&&<p>일치하는 룬이 없습니다.</p>}</div>
-      <p className="rune-help">같은 룬을 다시 누르면 중복 개수가 반영됩니다. 최대 10개까지 입력합니다.</p>
+      <p className="rune-help">조합표에서 반복되는 룬만 중복 선택할 수 있습니다. 최대 10개까지 입력합니다.</p>
       <a href={data.source} target="_blank" rel="noreferrer">PoE2DB 조합 원문 ↗</a><p className="rune-help">조합표 확인 {data.checkedAt} · {data.recipes.length}개 조합</p>
     </aside><div className="runeshape-content">
       <div className="rune-entry-head"><h3>입력한 룬 <small>{entered.length}/10</small></h3><UiButton disabled={!entered.length} onClick={()=>change(entered.slice(0,-1))}><Undo2 size={14}/>되돌리기</UiButton><UiButton disabled={!entered.length} onClick={()=>change([])}><RotateCcw size={14}/>새 맵</UiButton></div>
+      {selectionError&&<p className="rune-selection-error" role="alert">{selectionError}</p>}
       <div className="rune-entered">{entered.map((id,i)=><button key={i} onClick={()=>change(entered.filter((_,j)=>j!==i))} aria-label={`${i+1}번째 ${byId.get(id)?.name} 제거`}><small>{i+1}</small><Rune id={id}/><X size={12}/></button>)}{!entered.length&&<p>왼쪽에서 첫 번째 룬을 선택하세요. 입력한 룬은 이 브라우저 탭에 저장됩니다.</p>}</div>
       <div className="rune-filters"><label>비교 방식<select value={mode} onChange={e=>setMode(e.target.value as typeof mode)}><option value="sequence">입력 순서 일치</option><option value="contains">보유 룬 포함 · 순서 무시</option></select></label><label>지역 레벨<input type="number" min="1" max="100" placeholder="전체" value={level} onChange={e=>setLevel(e.target.value)}/></label><label>총 슬롯<select value={slots} onChange={e=>setSlots(e.target.value)}><option value="">전체</option>{Array.from({length:9},(_,i)=>i+2).map(n=><option key={n}>{n}</option>)}</select></label><label>정렬<select value={sort} onChange={e=>setSort(e.target.value)}><option value="remaining">남은 룬 적은 순</option><option value="price">보상 시세 높은 순</option></select></label><label>보상 검색<input type="search" placeholder="신성한 오브 등" value={reward} onChange={e=>setReward(e.target.value)}/></label></div>
       <div className="rune-results-head"><strong aria-live="polite">가능한 조합 {matches.length}개</strong><span>{mode==='sequence'?'입력한 룬이 조합의 앞부분과 일치하는 후보':'입력한 룬의 종류와 개수를 모두 포함하는 후보'}</span></div>
