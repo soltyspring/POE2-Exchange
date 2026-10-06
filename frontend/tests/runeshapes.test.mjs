@@ -35,3 +35,11 @@ test('duplicate selection limits follow actual recipes, including special ten-ru
  assert.equal(runeSelectionLimit(data.recipes,bait.id),10)
  assert.equal(runeSelectionLimit(data.recipes,'unknown'),0)
 })
+
+test('planner results are identical when entered runes are reordered',()=>{
+ const recipe=data.recipes.find(r=>r.name==='칼란드라의 거울')
+ const entered=recipe.runes.slice(0,3)
+ const candidates=values=>data.recipes.filter(r=>remainingRunes(r.runes,values,'contains')!==null).map(r=>r.id)
+ assert.deepEqual(candidates(entered),candidates([...entered].reverse()))
+ assert.deepEqual(remainingRunes(recipe.runes,entered,'contains'),remainingRunes(recipe.runes,[...entered].reverse(),'contains'))
+})
