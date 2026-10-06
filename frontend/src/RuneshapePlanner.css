@@ -18,10 +18,12 @@
 .runeshape-planner .ui-button { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px; padding:10px 14px; font-size:15px; font-weight:600; color:var(--text); }
 .runeshape-planner button:disabled { cursor:default; opacity:.5; }
 .runeshape-planner button:focus-visible { outline:2px solid var(--focus-ring); outline-offset:3px; }
-.rune-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:18px; }
-.runeshape-planner .rune-options button { min-height:60px; padding:10px; min-width:0; justify-content:flex-start; text-align:left; border-color:var(--line-strong); border-radius:9px; }
+.rune-options { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:18px; }
+.runeshape-planner .rune-options button { min-height:52px; padding:7px; min-width:0; justify-content:flex-start; text-align:left; border-color:var(--line-strong); border-radius:9px; }
 .rune-chip { display:inline-flex; align-items:center; gap:9px; padding:8px 12px; border:1px solid var(--line-strong); border-radius:8px; background:var(--surface-raised); font-size:16px; font-weight:600; line-height:1.4; color:var(--text); }
 .rune-chip img { width:32px; height:32px; object-fit:contain; flex:none; }
+.rune-options .rune-chip { font-size:13px; gap:5px; overflow-wrap:anywhere; }
+.rune-options .rune-chip img { width:24px; height:24px; }
 .rune-options .rune-chip,.rune-entered .rune-chip { padding:0; border:0; background:transparent; }
 .rune-entry-head { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
 .rune-entry-head h3 { margin:0 auto 0 0; font-size:20px; }
@@ -49,12 +51,12 @@
 .runeshape-planner .rune-help { font-size:13px; }
 .runeshape-layout a { color:var(--accent); }
 @media(max-width:1400px) { .rune-results { grid-template-columns:1fr; } }
-@media(max-width:900px) { .runeshape-layout { grid-template-columns:310px minmax(0,1fr); } .runeshape-layout > aside { padding:18px; } .rune-options { grid-template-columns:1fr; } .runeshape-layout > .runeshape-content { padding:20px; } }
+@media(max-width:900px) { .runeshape-layout { grid-template-columns:310px minmax(0,1fr); } .runeshape-layout > aside { padding:18px; } .rune-options { grid-template-columns:repeat(3,minmax(0,1fr)); } .runeshape-layout > .runeshape-content { padding:20px; } }
 @media(max-width:700px) {
   .runeshape-layout { display:block; overflow:auto; }
   .runeshape-layout > aside,.runeshape-layout > .runeshape-content { overflow:visible; padding:18px 16px; }
   .runeshape-layout > aside { border-right:0; border-bottom:1px solid var(--line); }
-  .rune-options { grid-template-columns:repeat(2,minmax(0,1fr)); max-height:240px; overflow:auto; }
+  .rune-options { grid-template-columns:repeat(3,minmax(0,1fr)); max-height:240px; overflow:auto; }
   .runeshape-planner > header { padding:16px; }
   .runeshape-planner h2 { font-size:24px; }
   .runeshape-planner > header p { font-size:14px; }
