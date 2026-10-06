@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises'
 import ts from 'typescript'
 const source=await readFile(new URL('../src/runeshapeModel.ts',import.meta.url),'utf8')
 const output=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText
-const {remainingRunes,runeSelectionLimit}=await import('data:text/javascript;base64,'+Buffer.from(output).toString('base64'))
+const {remainingRunes,runeSelectionLimit,matchRuneInventory,compareRuneCandidates}=await import('data:text/javascript;base64,'+Buffer.from(output).toString('base64'))
 const data=JSON.parse(await readFile(new URL('../src/runeshapes.json',import.meta.url),'utf8'))
 test('sequence matching preserves order and rejects extra runes',()=>{
  assert.deepEqual(remainingRunes(['a','b','a'],['a','b'],'sequence'),['a'])
@@ -42,4 +42,19 @@ test('planner results are identical when entered runes are reordered',()=>{
  const candidates=values=>data.recipes.filter(r=>remainingRunes(r.runes,values,'contains')!==null).map(r=>r.id)
  assert.deepEqual(candidates(entered),candidates([...entered].reverse()))
  assert.deepEqual(remainingRunes(recipe.runes,entered,'contains'),remainingRunes(recipe.runes,[...entered].reverse(),'contains'))
+})
+
+test('extra inventory runes do not hide a complete recipe and duplicate counts are consumed once',()=>{
+ assert.deepEqual(matchRuneInventory(['a','b'],['c','b','a','d']),{remaining:[],available:[true,true],matched:2})
+ assert.deepEqual(matchRuneInventory(['a','a','b'],['a','c']),{remaining:['a','b'],available:[true,false,false],matched:1})
+ const recipe=['a','b','c'];assert.deepEqual(matchRuneInventory(recipe,['b','a']),matchRuneInventory(recipe,['a','b']))
+})
+test('recommendation ranks completed first then proximity then known reward price',()=>{
+ const rows=[{remaining:['x'],price:1000,matched:3},{remaining:[],price:2,matched:2},{remaining:[],price:5,matched:2},{remaining:['x','y'],price:99999,matched:7}]
+ assert.deepEqual([...rows].sort(compareRuneCandidates),[rows[2],rows[1],rows[0],rows[3]])
+})
+test('adding a rune cannot remove existing inventory-related candidates',()=>{
+ const candidates=pool=>data.recipes.filter(r=>matchRuneInventory(r.runes,pool).matched>0).map(r=>r.id)
+ const before=candidates(['Fire_Rune']);const after=new Set(candidates(['Fire_Rune','Cold_Rune','Stone_Rune']))
+ assert.ok(before.every(id=>after.has(id)))
 })

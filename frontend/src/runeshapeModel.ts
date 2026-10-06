@@ -9,3 +9,17 @@ export function remainingRunes(recipe: string[], entered: string[], mode: 'seque
 export function runeSelectionLimit(recipes: {runes:string[]}[], id:string): number {
   return recipes.reduce((limit,recipe)=>Math.max(limit,recipe.runes.filter(rune=>rune===id).length),0)
 }
+
+/** Extra inventory runes never disqualify a recipe; consume each copy once. */
+export function matchRuneInventory(recipe:string[], inventory:string[]) {
+  const pool=[...inventory], remaining:string[]=[], available:boolean[]=[]
+  for(const rune of recipe){
+    const index=pool.indexOf(rune)
+    available.push(index>=0)
+    if(index>=0)pool.splice(index,1);else remaining.push(rune)
+  }
+  return {remaining,available,matched:recipe.length-remaining.length}
+}
+export function compareRuneCandidates(a:{remaining:string[];price:number|null;matched:number},b:{remaining:string[];price:number|null;matched:number}) {
+  return a.remaining.length-b.remaining.length || (b.price??-1)-(a.price??-1) || b.matched-a.matched
+}

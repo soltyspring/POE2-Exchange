@@ -95,3 +95,20 @@
 .runeshape-content .rune-missing { padding-top:12px; gap:8px; }
 .runeshape-content .rune-missing > strong { font-size:13px; }
 .runeshape-content .rune-help { font-size:12px; }
+
+.rune-recommendations { margin:0 0 20px; padding:16px; border:1px solid var(--selection-line); border-radius:10px; background:var(--accent-soft); }
+.rune-recommendations h3 { margin:0; font-size:17px; }
+.runeshape-content .rune-recommendations p { font-size:12px; margin:6px 0 12px; }
+.rune-recommendations > div { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.rune-recommendations article { padding:12px; background:var(--surface); border:1px solid var(--line); border-radius:8px; min-width:0; }
+.rune-recommendations article > small,.rune-recommendations article > strong,.rune-recommendations article > span { display:block; margin-bottom:6px; }
+.rune-recommendations article > small { color:var(--accent); font-size:12px; font-weight:600; }
+.rune-recommendations article > strong { font-size:15px; }
+.rune-recommendations article > span,.rune-recommendations article > div > span:not(.rune-chip) { font-size:12px; color:var(--muted); }
+.rune-recommendations article > div { display:flex; flex-wrap:wrap; gap:5px; margin-top:10px; }
+.runeshape-content .rune-recommendations .rune-chip { font-size:12px; padding:4px 6px; }
+.runeshape-content .rune-recommendations .rune-chip img { width:22px; height:22px; }
+.rune-have .rune-chip { border-color:var(--selection-line); background:var(--accent-soft); }
+.rune-have > small { color:var(--accent)!important; }
+.rune-show-more { margin:16px 0; width:100%; }
+@media(max-width:1000px) { .rune-recommendations > div { grid-template-columns:1fr; } }
