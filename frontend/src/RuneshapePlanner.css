@@ -68,3 +68,30 @@
 }
 
 .runeshape-planner .rune-selection-error { padding:12px 16px; border:1px solid var(--danger); border-radius:8px; background:var(--danger-soft); color:var(--danger); font-size:15px; }
+
+/* Compact results while retaining the three-column rune picker. */
+.runeshape-content { font-size:14px; }
+.runeshape-content .rune-entry-head h3 { font-size:18px; }
+.runeshape-content .rune-entry-head h3 small { font-size:13px; }
+.runeshape-content .ui-button { min-height:38px; padding:7px 11px; font-size:13px; }
+.runeshape-content .rune-entered { min-height:64px; margin:12px 0 18px; padding:12px; gap:8px; }
+.runeshape-content .rune-entered p { font-size:13px; }
+.runeshape-content .rune-entered button { min-height:40px; padding:7px 10px; gap:8px; }
+.runeshape-content label { font-size:13px; gap:6px; }
+.runeshape-content input,.runeshape-content select { height:40px; padding:8px 10px; font-size:13px; }
+.runeshape-content .rune-filters { gap:12px; }
+.runeshape-content .rune-results-head { margin:20px 0 12px; font-size:17px; gap:12px; }
+.runeshape-content .rune-results-head span { font-size:12px; }
+.runeshape-content .rune-results { gap:12px; }
+.runeshape-content .rune-results article { padding:16px; border-radius:9px; }
+.runeshape-content .rune-reward,.runeshape-content .rune-reward > div:last-child { font-size:16px; }
+.runeshape-content .rune-reward small { font-size:12px; margin-top:4px; }
+.runeshape-content .rune-chip { padding:6px 9px; gap:6px; font-size:14px; border-radius:6px; }
+.runeshape-content .rune-chip img { width:26px; height:26px; }
+.runeshape-content .rune-entered .rune-chip { padding:0; }
+.runeshape-content .rune-recipe { padding:15px 0; gap:8px; }
+.runeshape-content .rune-recipe > span { gap:4px; }
+.runeshape-content .rune-recipe > span > small { font-size:11px; min-width:12px; }
+.runeshape-content .rune-missing { padding-top:12px; gap:8px; }
+.runeshape-content .rune-missing > strong { font-size:13px; }
+.runeshape-content .rune-help { font-size:12px; }
