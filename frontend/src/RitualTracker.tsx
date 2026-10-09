@@ -53,7 +53,7 @@ function RitualSession({onClose,markets,league,storageKey,sessionName,sessionId,
  const price=(n:number|null)=>n===null?'시세 없음':unit==='exalted'&&!(rate&&rate>0)?'환율 없음':`${(unit==='exalted'?n/rate!:n).toLocaleString('ko-KR',{maximumFractionDigits:3})} ${unit==='exalted'?'엑잘':'신성'}`
  const add=(item?:Item,status:Entry['status']='acquired')=>{const name=item?.name||query.trim();if(!name)return;update([...current.entries,{key:crypto.randomUUID(),name,quantity:1,status,price:item&&Number.isFinite(item.price_divine)?item.price_divine:null}]);setExpanded(current.id);setNotice(`${name} · ${status==='acquired'?'먹음':'킵'} 추가 완료`)}
  const choices=markets.filter(m=>(all||m.category==='Ritual')&&(!query.trim()||m.name.toLowerCase().includes(query.trim().toLowerCase()))).sort((a,b)=>sort==='name'?a.name.localeCompare(b.name,'ko'):(b.price_divine??0)-(a.price_divine??0))
- const shortName=(name:string)=>name.replace(/^혼란스러운\s+/, '').replace(/의 징조$/, '').replace(/ 징조$/, '')
+ const shortName=(name:string)=>name.replace(/^(?:좌측|우측|혼란스러운)\s+/, '').replace(/의 징조$/, '').replace(/ 징조$/, '')
  const groupName=(item:Item)=>item.category==='Ritual'?(item.name.startsWith('좌측')?'좌측 징조':item.name.startsWith('우측')?'우측 징조':item.name.startsWith('혼란스러운')?'혼란스러운 징조':'기타 징조'):(item.category_label||item.category)
  const groups=[...new Set(choices.slice(0,visible).map(groupName))].sort((a,b)=>{const order=['좌측 징조','우측 징조','혼란스러운 징조','기타 징조'];const ai=order.indexOf(a),bi=order.indexOf(b);return (ai<0?4:ai)-(bi<0?4:bi)||a.localeCompare(b,'ko')})
  const sum=(entries:Entry[])=>entries.reduce((n,e)=>n+(e.price??0)*e.quantity,0)
