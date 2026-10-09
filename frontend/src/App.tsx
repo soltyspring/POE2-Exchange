@@ -1,3 +1,4 @@
+import {MarketIcon} from './MarketIcon'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CandlestickSeries, ColorType, LineSeries, createChart, type IChartApi, type ISeriesApi, type UTCTimestamp } from 'lightweight-charts'
 import { Activity, ChevronDown, Clock3, Coins, ExternalLink, Gift, LayoutDashboard, RefreshCw, Search, ShieldCheck, Star, TrendingUp, TriangleAlert, X } from 'lucide-react'
@@ -181,18 +182,6 @@ function PriceChart({candles, loading, error, interval, seriesKey}: {candles: Ca
     return () => api.unsubscribeCrosshairMove(onCrosshairMove)
   }, [candles, interval])
   return <div className="chart-wrap"><div ref={box} />{hovered && <div className="chart-legend"><span>{clock(hovered.time)}</span>{interval === '1m' ? <strong>{price(hovered.close)} · 관측 {hovered.samples}회</strong> : <strong>시 {price(hovered.open)}　고 {price(hovered.high)}　저 {price(hovered.low)}　종 {price(hovered.close)} <small>· 관측 {hovered.samples}회</small></strong>}</div>}{candles.length < 2 && <div className="chart-empty"><Activity size={25}/><strong>{loading ? '차트 조회 중' : error ? '차트 조회 실패' : '관측 데이터를 모으는 중'}</strong><span>{loading ? '선택한 아이템의 가격 기록을 불러오고 있습니다.' : error ? '다시 조회하거나 다른 아이템을 선택해 주세요.' : '서버 실행 후 1분마다 가격 스냅샷이 쌓입니다.'}</span>{!loading && !error && <span>원천 시세는 대략 1시간마다 갱신됩니다.</span>}</div>}</div>
-}
-
-function MarketIcon({market, size = 'normal', eager = false}: {market: Market; size?: 'normal' | 'large'; eager?: boolean}) {
-  const [failed, setFailed] = useState(false)
-  const iconUrl = `/api/market-icon/${market.id.split('/').map(encodeURIComponent).join('/')}?league=${encodeURIComponent(market.league)}`
-  useEffect(() => setFailed(false), [iconUrl])
-  const showImage = !failed
-  return <span className={`market-icon ${size} ${showImage ? 'has-image' : 'fallback'}`}>
-    {showImage
-      ? <img src={iconUrl} alt="" loading={size === 'large' || eager ? 'eager' : 'lazy'} decoding="async" onError={() => setFailed(true)} />
-      : <Coins size={size === 'large' ? 24 : 18} aria-hidden="true"/>}
-  </span>
 }
 
 function MarketLiquidityWarning({market}: {market: Market}) {
