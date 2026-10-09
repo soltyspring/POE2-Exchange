@@ -11,3 +11,17 @@
 .ritual-round{margin-bottom:8px;border-radius:10px}.ritual-round-summary{padding:12px 20px}.ritual-round-heading{margin-bottom:8px;align-items:center}.ritual-round-values{gap:12px}.ritual-round-values strong{font-size:20px;margin:2px 0;line-height:1.25}.ritual-round-values small{font-size:12px;line-height:1.4}@media(max-width:760px){.ritual-round-summary{padding:10px 14px}.ritual-round-values strong{font-size:18px}.ritual-round-heading{margin-bottom:6px}}
 .ritual-disclosure{display:inline-block;margin-left:12px;font-size:12px;color:var(--muted)}
 .ritual-tracker,.ritual-tracker button,.ritual-tracker input,.ritual-tracker select,.ritual-tracker textarea{font-family:var(--font-ui);font-synthesis:none}
+/* Match the expedition view's label and action hierarchy. */
+.ritual-tracker{font-size:15px;font-weight:500;line-height:1.5}
+.ritual-tracker h2{font-weight:750;letter-spacing:-.03em}
+.ritual-tracker label{font-size:14px;font-weight:600}
+.ritual-tracker .ui-button{font-size:15px;font-weight:600;min-height:40px;padding:8px 12px;color:var(--text)}
+.ritual-tracker input,.ritual-tracker select{font-size:15px;font-weight:500}
+.ritual-options button>span{font-weight:650;font-size:14px}
+.ritual-options small,.ritual-entry small,.ritual-tracker p{font-weight:500}
+.ritual-round-heading>strong,.ritual-entry strong{font-weight:700;font-size:15px}
+.ritual-round-heading small{font-weight:500}
+.ritual-round-values small{font-weight:600}
+.ritual-round-values strong{font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.ritual-round-values small:last-child{font-weight:500}
+.ritual-status button[aria-pressed=true]{font-weight:700}
