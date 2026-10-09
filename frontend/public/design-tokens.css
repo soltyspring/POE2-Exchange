@@ -28,8 +28,10 @@
   --danger-soft: #fbeef1;
   --radius: 10px;
   --space: 8px;
+  --font-ui: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   background: var(--canvas);
   color: var(--text);
   font-synthesis: none;
 }
+body, button, input, select, textarea { font-family: var(--font-ui); }
