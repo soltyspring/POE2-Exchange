@@ -9,6 +9,7 @@ import { useMarketDialog } from './useMarketDialog'
 import { request } from './apiClient'
 import { chartTheme } from './theme'
 const RuneshapePlanner = lazy(() => import('./RuneshapePlanner').then(module => ({default: module.RuneshapePlanner})))
+const RitualTracker = lazy(() => import('./RitualTracker').then(module => ({default: module.RitualTracker})))
 import { UiButton } from './ui'
 import { MarketPrice } from './marketDisplay'
 
@@ -235,6 +236,8 @@ export default function App() {
   const [exchangeUnit, setExchangeUnit] = useState<'exalted' | 'divine'>('exalted')
   const [exchangeOpen, setExchangeOpen] = useState(false)
   const [rewardsOpen, setRewardsOpen] = useState(false)
+  const [ritualOpen, setRitualOpen] = useState(false)
+  const closeRitual = useCallback(() => setRitualOpen(false), [])
   const [runesOpen, setRunesOpen] = useState(false)
   const closeRunes = useCallback(() => setRunesOpen(false), [])
   const [rewardContent, setRewardContent] = useState<RewardContentId>('ritual')
@@ -287,7 +290,7 @@ export default function App() {
     setRecentIds(items => [selectedId, ...items.filter(id => id !== selectedId)].slice(0, 12))
   }, [selectedId])
   useEffect(() => {
-    if (exchangeOpen || rewardsOpen || runesOpen) return
+    if (exchangeOpen || rewardsOpen || runesOpen || ritualOpen) return
     const keyboard = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
@@ -304,7 +307,7 @@ export default function App() {
     document.addEventListener('keydown', keyboard)
     document.addEventListener('pointerdown', outside)
     return () => { document.removeEventListener('keydown', keyboard); document.removeEventListener('pointerdown', outside) }
-  }, [exchangeOpen, rewardsOpen, runesOpen])
+  }, [exchangeOpen, rewardsOpen, runesOpen, ritualOpen])
   useEffect(() => {
     request('/api/leagues').then(r => {if (!r.ok) throw Error('리그 목록을 불러오지 못했습니다.'); return r.json()})
       .then((items: League[]) => {setLeagues(items); setLeague(items.find(item => item.id === new URLSearchParams(window.location.search).get('league'))?.id || items[0]?.id || '')})
@@ -549,7 +552,7 @@ export default function App() {
     </aside>
 
     <main className="main" id="market-main" tabIndex={-1}>
-      <header className="topbar"><div className="breadcrumb"><b>시세 대시보드</b></div><div className="top-actions"><UiButton className="reward-launch" onClick={() => {setExchangeOpen(false); setRewardsOpen(true)}}><Gift size={16}/>콘텐츠 보상</UiButton><UiButton className="exchange-launch" onClick={() => {setRewardsOpen(false); setExchangeOpen(true)}}><Coins size={16}/>거래소 시세표</UiButton><UiButton className="exchange-launch" onClick={() => {setExchangeOpen(false); setRewardsOpen(false); setRunesOpen(true)}}>탐험 룬 조합</UiButton><span className={"live-pill " + snapshotHealth(data?.source_status || []).quality} aria-live="polite"><i/> {lastFetched ? `${timeAgo(lastFetched)} 갱신` : '데이터 연결'}</span><button className={`icon-button ${refreshing ? 'spinning' : ''}`} aria-label="선택 아이템 새로고침" title={data?.preview_mode ? "로컬 미리보기는 저장된 데이터만 읽습니다." : "선택 아이템 강제 갱신 · 캐시 무시"} disabled={!selectedId || refreshing || data?.preview_mode} onClick={() => void forceRefreshSelected()}><RefreshCw size={17}/></button><a className="help-link" href="/guide/index.html">사용 가이드</a></div></header>
+      <header className="topbar"><div className="breadcrumb"><b>시세 대시보드</b></div><div className="top-actions"><UiButton className="reward-launch" onClick={() => {setExchangeOpen(false); setRewardsOpen(true)}}><Gift size={16}/>콘텐츠 보상</UiButton><UiButton className="exchange-launch" onClick={() => {setRewardsOpen(false); setExchangeOpen(true)}}><Coins size={16}/>거래소 시세표</UiButton><UiButton className="exchange-launch" onClick={() => {setExchangeOpen(false); setRewardsOpen(false); setRunesOpen(true)}}>탐험 룬 조합</UiButton><UiButton onClick={() => {setExchangeOpen(false);setRewardsOpen(false);setRunesOpen(false);setRitualOpen(true)}}>의식 보상 기록</UiButton><span className={"live-pill " + snapshotHealth(data?.source_status || []).quality} aria-live="polite"><i/> {lastFetched ? `${timeAgo(lastFetched)} 갱신` : '데이터 연결'}</span><button className={`icon-button ${refreshing ? 'spinning' : ''}`} aria-label="선택 아이템 새로고침" title={data?.preview_mode ? "로컬 미리보기는 저장된 데이터만 읽습니다." : "선택 아이템 강제 갱신 · 캐시 무시"} disabled={!selectedId || refreshing || data?.preview_mode} onClick={() => void forceRefreshSelected()}><RefreshCw size={17}/></button><a className="help-link" href="/guide/index.html">사용 가이드</a></div></header>
       <div className="content">
         <div className="page-heading"><div><span className="page-eyebrow">PATH OF EXILE 2 · MARKET</span><h1>시세를 읽고, 타이밍을 찾으세요.</h1><p>아이템을 찾고, 가격 흐름과 저렴했던 시간을 한 화면에서 확인하세요.</p></div><label className="league-select"><span>거래 리그</span><select value={league} onChange={e => {setLeague(e.target.value); setData(null); setSelectedId('')}}>{leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select><ChevronDown size={15}/></label></div>
         <DataHealth states={data?.source_status || []} preview={!!data?.preview_mode}/>{error && <div className="error-banner" role="alert">{error}<button onClick={() => void fetchMarkets(true)}>다시 시도</button></div>}
@@ -597,6 +600,7 @@ export default function App() {
             <div className="market-panel-foot"><span>종목 선택 시 차트가 변경됩니다</span><span>시세 {marketCadence}분 확인</span></div>
           </section>
         </div>
+        {ritualOpen && <Suspense fallback={<div role="status">의식 기록 불러오는 중…</div>}><RitualTracker key={league} onClose={closeRitual} markets={data?.markets || []} league={league}/></Suspense>}
         {runesOpen && <Suspense fallback={<div role="status">룬 조합표 불러오는 중…</div>}><RuneshapePlanner onClose={closeRunes} markets={data?.markets || []}/></Suspense>}
         {rewardsOpen && <aside ref={rewardDialogRef} tabIndex={-1} className="reward-drawer market-window" role="dialog" aria-modal="true" aria-label="콘텐츠별 주요 보상"><div className="reward-head"><div><h2>콘텐츠별 주요 보상</h2><p>게임 중 가치 있는 드롭을 빠르게 확인하세요.</p></div><label className="reward-search"><Search size={17}/><input value={rewardQuery} onChange={event => setRewardQuery(event.target.value)} placeholder="보상 아이템 검색" aria-label="보상 아이템 검색"/>{rewardQuery && <button type="button" onClick={() => setRewardQuery('')} aria-label="보상 검색어 지우기"><X size={15}/></button>}</label><button onClick={() => setRewardsOpen(false)} aria-label="콘텐츠 보상 닫기"><X size={20}/></button></div><div className="reward-tabs exchange-nav">{rewardContents.map(content => <button key={content.id} className={rewardContent === content.id ? 'active' : ''} onClick={() => {setRewardContent(content.id); setRewardCategory('all'); setRewardCategoryOpen(false)}}><strong>{content.name}</strong><small>{content.hint}</small></button>)}</div><div className="reward-summary"><span>{activeRewardContent.name}</span><div className="reward-summary-actions"><div className="exchange-unit reward-unit" role="group" aria-label="보상 가격 단위"><button aria-pressed={rewardUnit === 'exalted'} className={rewardUnit === 'exalted' ? 'active' : ''} onClick={() => setRewardUnit('exalted')}>엑잘</button><button aria-pressed={rewardUnit === 'divine'} className={rewardUnit === 'divine' ? 'active' : ''} onClick={() => setRewardUnit('divine')}>신성</button></div><div className="exchange-sort reward-sort" role="group" aria-label="보상 정렬"><button aria-pressed={rewardSort === 'game'} className={rewardSort === 'game' ? 'active' : ''} onClick={() => setRewardSort('game')}>기본</button><button aria-pressed={rewardSort === 'price'} className={rewardSort === 'price' ? 'active' : ''} onClick={() => setRewardSort('price')}>비싼 순</button><button aria-pressed={rewardSort === 'name'} className={rewardSort === 'name' ? 'active' : ''} onClick={() => setRewardSort('name')}>ㄱㄴㄷ순</button></div><div className={`market-category-menu reward-category-menu ${rewardCategoryOpen ? 'open' : ''}`}><button className="market-category-trigger" aria-haspopup="listbox" aria-expanded={rewardCategoryOpen} onClick={() => setRewardCategoryOpen(open => !open)}><span>{rewardCategoryLabel}</span><ChevronDown size={15}/></button>{rewardCategoryOpen && <div className="market-category-options" role="listbox" aria-label="보상 아이템 분류"><button role="option" aria-selected={rewardCategory === 'all'} className={rewardCategory === 'all' ? 'selected' : ''} onClick={() => {setRewardCategory('all'); setRewardCategoryOpen(false)}}>전체 분류</button>{rewardCategoryOptions.map(item => <button key={item.key} role="option" aria-selected={rewardCategory === item.key} className={rewardCategory === item.key ? 'selected' : ''} onClick={() => {setRewardCategory(item.key); setRewardCategoryOpen(false)}}>{item.label}</button>)}</div>}</div><strong>{rewardSort === 'price' ? '비싼 순' : rewardSort === 'name' ? 'ㄱㄴㄷ순' : '기본 순서'} · {rewardMarkets.length}개</strong></div><small>현재 시세 기준, 1개당 {rewardUnitLabel} 환산</small></div><div className="reward-list"><ExchangeItemGrid groups={[{label: activeRewardContent.name, markets: rewardMarkets}]} selectedId={selectedId} onSelect={setSelectedId} quote={market => ({value: price(rewardPrice(market)), unit: rewardUnitLabel})} renderIcon={market => <MarketIcon market={market}/>} renderWarning={market => <MarketLiquidityWarning market={market}/>} renderPrice={value => <ExchangeCardPrice value={value}/>}/>{!rewardMarkets.length && <div className="reward-empty">{rewardQuery.trim() ? '검색 결과가 없습니다.' : '시세 데이터를 불러오는 중입니다.'}</div>}</div><div className="reward-foot"><span>poe.ninja 관측 시세 · 체결가와 다를 수 있음</span><button onClick={() => {setRewardsOpen(false); if (rewardMarkets.length) setSelectedId((rewardMarkets.find(m => m.id === selectedId) || rewardMarkets[0]).id)}}>선택 아이템 차트 보기</button></div></aside>}
         {exchangeOpen && <div className="exchange-overlay market-window" onMouseDown={event => {if (event.target === event.currentTarget) setExchangeOpen(false)}}><section ref={exchangeDialogRef} tabIndex={-1} className="exchange-panel" role="dialog" aria-modal="true" aria-label="게임 거래소 형태의 아이템 시세표">
@@ -635,3 +639,5 @@ export default function App() {
     </main>
   </div>
 }
+
+
