@@ -7,7 +7,8 @@ import './RitualTracker.css'
 import {transferKept} from './ritualTransfer'
 import {costInDivine,type RitualCost} from './ritualCost'
 const koreanInitials='ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'
-const matchesItemSearch=(name:string,query:string)=>{const text=name.normalize('NFC').toLowerCase(),search=query.normalize('NFC').trim().toLowerCase();if(!search||text.includes(search))return true;if(!/^[ㄱ-ㅎ\s]+$/.test(search))return false;const initials=Array.from(text,c=>{const code=c.charCodeAt(0)-0xac00;return code>=0&&code<=11171?koreanInitials[Math.floor(code/588)]:c}).join('').replace(/\s/g,'');return initials.includes(search.replace(/\s/g,''))}
+const englishInitialKeys:Record<string,string>={r:'ㄱ',R:'ㄲ',s:'ㄴ',e:'ㄷ',E:'ㄸ',f:'ㄹ',a:'ㅁ',q:'ㅂ',Q:'ㅃ',t:'ㅅ',T:'ㅆ',d:'ㅇ',w:'ㅈ',W:'ㅉ',c:'ㅊ',z:'ㅋ',x:'ㅌ',v:'ㅍ',g:'ㅎ'}
+const matchesItemSearch=(name:string,query:string)=>{const text=name.normalize('NFC').toLowerCase(),search=query.normalize('NFC').trim().toLowerCase();if(!search||text.includes(search))return true;const initialSearch=Array.from(query.trim(),c=>englishInitialKeys[c]||englishInitialKeys[c.toLowerCase()]||c).join('');if(!/^[ㄱ-ㅎ\s]+$/.test(initialSearch))return false;const initials=Array.from(text,c=>{const code=c.charCodeAt(0)-0xac00;return code>=0&&code<=11171?koreanInitials[Math.floor(code/588)]:c}).join('').replace(/\s/g,'');return initials.includes(initialSearch.replace(/\s/g,''))}
 type Item={id:string;name:string;category:string;category_label?:string;price_divine:number;icon:string|null}
 type Entry={key:string;name:string;quantity:number;status:'acquired'|'kept';price:number|null;originRoundId?:string;originEntryKey?:string;keptPrice?:number|null}
 type Round={id:string;name:string;entries:Entry[];time:string;cost?:RitualCost}
