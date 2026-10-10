@@ -6,6 +6,8 @@ import {useMarketDialog} from './useMarketDialog'
 import './RitualTracker.css'
 import {transferKept} from './ritualTransfer'
 import {costInDivine,type RitualCost} from './ritualCost'
+const koreanInitials='ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'
+const matchesItemSearch=(name:string,query:string)=>{const text=name.normalize('NFC').toLowerCase(),search=query.normalize('NFC').trim().toLowerCase();if(!search||text.includes(search))return true;if(!/^[ㄱ-ㅎ\s]+$/.test(search))return false;const initials=Array.from(text,c=>{const code=c.charCodeAt(0)-0xac00;return code>=0&&code<=11171?koreanInitials[Math.floor(code/588)]:c}).join('').replace(/\s/g,'');return initials.includes(search.replace(/\s/g,''))}
 type Item={id:string;name:string;category:string;category_label?:string;price_divine:number;icon:string|null}
 type Entry={key:string;name:string;quantity:number;status:'acquired'|'kept';price:number|null;originRoundId?:string;originEntryKey?:string;keptPrice?:number|null}
 type Round={id:string;name:string;entries:Entry[];time:string;cost?:RitualCost}
@@ -54,7 +56,7 @@ function RitualSession({onClose,markets,league,storageKey,sessionName,sessionId,
  const price=(n:number|null)=>n===null?'시세 없음':unit==='exalted'&&!(rate&&rate>0)?'환율 없음':`${(unit==='exalted'?n/rate!:n).toLocaleString('ko-KR',{maximumFractionDigits:3})} ${unit==='exalted'?'엑잘':'신성'}`
  const add=(item?:Item,status:Entry['status']='acquired')=>{const name=item?.name||query.trim();if(!name)return;update([...current.entries,{key:crypto.randomUUID(),name,quantity:1,status,price:item&&Number.isFinite(item.price_divine)?item.price_divine:null}]);setExpanded(current.id);setNotice(`${name} · ${status==='acquired'?'먹음':'킵'} 추가 완료`)}
  const currencyIds=['exchange:Currency:chaos','exchange:Currency:divine','exchange:Currency:exalted']
- const choices=markets.filter(m=>(all||m.category==='Currency'||(m.category==='Ritual'&&!['omen-of-abyssal-echoes','omen-of-light'].includes(m.id.split(':').pop()||'')))&&(!query.trim()||m.name.toLowerCase().includes(query.trim().toLowerCase()))).sort((a,b)=>{if(!all){const ai=currencyIds.indexOf(a.id),bi=currencyIds.indexOf(b.id);if(a.category==='Currency'||b.category==='Currency'){if(a.category!==b.category)return a.category==='Currency'?1:-1;if(ai>=0||bi>=0)return ai>=0&&bi>=0?ai-bi:ai>=0?-1:1}}return sort==='name'?a.name.localeCompare(b.name,'ko'):(b.price_divine??0)-(a.price_divine??0)})
+ const choices=markets.filter(m=>(all||m.category==='Currency'||(m.category==='Ritual'&&!['omen-of-abyssal-echoes','omen-of-light'].includes(m.id.split(':').pop()||'')))&&matchesItemSearch(m.name,query)).sort((a,b)=>{if(!all){const ai=currencyIds.indexOf(a.id),bi=currencyIds.indexOf(b.id);if(a.category==='Currency'||b.category==='Currency'){if(a.category!==b.category)return a.category==='Currency'?1:-1;if(ai>=0||bi>=0)return ai>=0&&bi>=0?ai-bi:ai>=0?-1:1}}return sort==='name'?a.name.localeCompare(b.name,'ko'):(b.price_divine??0)-(a.price_divine??0)})
  const shownChoices=all?choices.slice(0,visible):[...choices.filter(m=>m.category!=='Currency').slice(0,visible),...choices.filter(m=>m.category==='Currency')]
  const shortName=(name:string)=>name.replace(/^(?:좌측|우측|혼란스러운)\s+/, '').replace(/의 징조$/, '').replace(/ 징조$/, '')
  const groupName=(item:Item)=>item.category==='Ritual'?(item.name.startsWith('좌측')?'좌측 징조':item.name.startsWith('우측')?'우측 징조':item.name.startsWith('혼란스러운')?'혼란스러운 징조':'기타 징조'):(item.category_label||item.category)
