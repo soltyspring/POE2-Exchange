@@ -46,3 +46,5 @@
 .ritual-session-tabs button[aria-selected=false] .ritual-tab-summary{display:block}.ritual-session-tabs button[aria-selected=false] .ritual-tab-summary>span{display:flex;align-items:baseline;gap:12px}.ritual-session-tabs button[aria-selected=false] .ritual-tab-summary b{font-size:18px;font-weight:700}
 
 .ritual-tab-summary{display:block}.ritual-tab-summary>span{display:flex;align-items:baseline;gap:12px}.ritual-tab-summary b{font-size:18px;font-weight:700}.ritual-session-summary{grid-template-columns:1fr}.ritual-round-values{grid-template-columns:1fr}
+
+.ritual-picker-bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-bottom:12px}.ritual-picker-bottom>div:first-child{min-width:0;flex:1}.ritual-picker-bottom .ritual-add-notice{margin-bottom:0!important}.ritual-quick-add{display:flex;gap:5px;flex:none}.ritual-quick-add .ui-button{font-size:12px;min-height:32px;padding:5px 8px;background:var(--accent-soft);border-color:var(--action-border)}
