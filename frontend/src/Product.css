@@ -172,7 +172,7 @@ button:disabled { opacity: .45; }
 .app-shell .heatmap-corner, .app-shell .heatmap-day, .app-shell .heatmap-hour { color: var(--muted); }
 .app-shell .heatmap-cell { color: var(--text); border-color: var(--line-strong); min-height: 28px; }
 .app-shell .heatmap-cell.empty { background: var(--canvas); color: var(--quiet); }
-.app-shell .heatmap-cell.sparse { background-image: repeating-linear-gradient(135deg, transparent 0 4px, var(--overlay) 4px 8px); color: var(--muted); }
+.app-shell .heatmap-cell.sparse { background-image: none; color: var(--muted); }
 .heatmap-detail { display: block; padding: 10px 14px; margin-top: 8px; border-radius: 5px; background: var(--surface-raised); color: var(--muted); font-size: 12px; line-height: 1.7; min-height: 42px; }
 .recovery-screen { max-width: 700px; margin: 10vh auto; padding: 28px; line-height: 1.8; }
 .recovery-screen button { padding: 12px 18px; background: var(--accent-soft); color: var(--text); border: 1px solid var(--selection-line); border-radius: 5px; margin-right: 20px; }
@@ -331,3 +331,46 @@ button:disabled { opacity: .45; }
 @media (prefers-reduced-motion: reduce) {
   *, *:before, *:after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
 }
+
+/* Market workspace: compact context, clear navigation, and readable analysis. */
+.app-shell .content{padding-top:24px}
+.app-shell .page-heading{margin-bottom:16px;align-items:center;text-align:left}
+.app-shell .page-heading h1{font-size:26px;margin:4px 0 6px}
+.app-shell .page-eyebrow{font-size:10px;letter-spacing:.1em}
+.dashboard-jump{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px;flex-wrap:wrap}
+.dashboard-jump a,.dashboard-jump button{font:inherit;font-size:13px;font-weight:650;padding:8px 12px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--text)}
+.dashboard-jump a:first-child{color:var(--accent);background:var(--accent-soft);border-color:var(--action-border)}
+.dashboard-jump button{margin-left:auto}
+#price-workspace,#buying-window{scroll-margin-top:20px}
+.app-shell .data-health{padding:8px 12px;margin-bottom:12px;font-size:11px}
+.app-shell .main-grid{gap:16px;align-items:start}
+.app-shell .market-panel-title{padding:18px 18px 14px}
+.app-shell .chart-panel{padding:20px 20px 0}
+.chart-view-tools{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0 10px;color:var(--muted);font-size:11px}
+.chart-view-tools button{border:1px solid var(--line);background:var(--surface);border-radius:5px;color:var(--text);font:inherit;font-weight:650;padding:5px 9px;white-space:nowrap}
+.app-shell .chart-legend{top:48px;max-width:calc(100% - 80px);pointer-events:none;line-height:1.5;display:flex;flex-wrap:wrap;gap:4px 10px}
+.app-shell .heatmap-cell{height:33px;font-size:11px;background-image:none}
+.app-shell .heatmap-cell.sparse{background-image:none;color:var(--text)}
+.app-shell .heatmap-hour{height:33px;font-size:11px}
+.app-shell .seasonality-heading h2{font-size:20px}
+.app-shell .seasonality-summary{gap:12px}
+.app-shell .heatmap-detail{font-size:13px;border:1px solid var(--line)}
+@media(max-width:760px){
+ .app-shell .content{padding-top:18px}
+ .app-shell .page-heading{align-items:flex-start;gap:12px;margin-bottom:14px}
+ .app-shell .page-heading h1{font-size:23px}
+ .app-shell .page-heading p{font-size:12px}
+ .dashboard-jump{gap:5px}.dashboard-jump a,.dashboard-jump button{font-size:12px;padding:8px}
+ .dashboard-jump button{margin-left:0}
+ .app-shell .chart-panel{padding:16px 14px 0}
+ .app-shell .market-ticker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:hidden}
+ .app-shell .market-ticker>button{min-width:0;padding:12px 8px;gap:7px;flex-wrap:wrap}
+ .app-shell .market-ticker .market-icon{width:25px;height:25px}
+ .app-shell .market-ticker strong{font-size:11px}
+ .app-shell .market-ticker small{display:none}
+ .app-shell .market-ticker em{font-size:11px}
+ .app-shell .chart-legend{font-size:10px}
+ .chart-view-tools{font-size:10px}
+}
+
+.app-shell .heatmap-cell{border:1px solid var(--line);box-shadow:none;border-radius:5px}.app-shell .heatmap-cell:hover{outline:2px solid var(--accent);outline-offset:-2px}.app-shell .heatmap-cell:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
