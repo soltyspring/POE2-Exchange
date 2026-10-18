@@ -1,4 +1,33 @@
-# POE2 Market
+# POE2 Exchange
+
+**시세 수집, 가격 이력 저장, 차트와 시간대 분석을 연결한 개인 데이터 대시보드입니다.**
+
+> A PoE2 market-data pipeline and browser dashboard built with Python, React, and SQLite.
+
+현재 가격만으로는 보이지 않는 흐름을 살펴보기 위해 외부 데이터 조회부터 장기 관측 저장과 브라우저 시각화까지 구현했습니다.
+
+## 핵심 구현
+
+| 영역 | 구현 |
+| --- | --- |
+| 수집 | 공개 경제 API, 조건부 요청, 호스트별 요청 제한 |
+| 저장 | SQLite 관측 이력, 전체 분류와 최근 조회 아이템의 주기 분리 |
+| 화면 | 1분 관측 선 그래프, 더 긴 구간의 OHLC, 검색·관심 목록 |
+| 분석 | 한국시간 기준 요일·시간대 패턴과 별도 공식 교환량 |
+| 빌드 | Mobalytics 공개 빌드 조회와 구조 데이터 내보내기 |
+| 운영 | Ubuntu 수집기, cron과 정적 화면 제공 |
+
+```text
+외부 시세·교환량 API → FastAPI 수집/정규화 → SQLite
+                            ↓                ↓
+                      조회 API · 시간대 분석
+                            ↓
+                       React 대시보드
+```
+
+`backend/`는 API·수집·저장, `frontend/`는 화면, `deploy/`는 운영 스크립트입니다. 차트의 **관측 가격**과 실제 거래 체결 내역은 구분합니다.
+
+## 실행 및 운영 안내
 
 Python + React로 만든 개인용 PoE2 시세 대시보드입니다. 기본 시세는 [poe.ninja의 공개 경제 API](https://poe.ninja/docs/api)에서 받으며, 브라우저는 로컬 Python 서버에만 요청합니다.
 
@@ -45,7 +74,7 @@ npm run dev
 
 ## Ubuntu에서 계속 수집
 
-`solty@192.168.0.50`에서는 sudo 권한 없이 사용자 crontab이 1분마다 수집기 실행 상태를 확인합니다. `flock`으로 중복 실행을 막고 백엔드는 서버 내부 `127.0.0.1:18080`에 바인딩합니다. DB는 Git에서 제외한 `~/POE2-Exchange/data/prices.sqlite3`에 누적됩니다.
+Ubuntu 운영 예시에서는 sudo 권한 없이 사용자 crontab이 1분마다 수집기 실행 상태를 확인합니다. `flock`으로 중복 실행을 막고 백엔드는 서버 내부 `127.0.0.1:18080`에 바인딩합니다. DB는 Git에서 제외한 `~/POE2-Exchange/data/prices.sqlite3`에 누적됩니다.
 
 ```bash
 git clone https://github.com/soltyspring/POE2-Exchange.git ~/POE2-Exchange
@@ -65,7 +94,7 @@ cron 등록 후 최대 1분 이내에 수집기가 시작됩니다. 코드 갱�
 로컬 화면을 우분투 데이터에 연결하려면 SSH 터널을 연 뒤 프런트엔드를 다시 실행합니다. 서버 주소와 키 경로는 본인 환경에 맞게 바꿉니다.
 
 ```powershell
-ssh -N -L 18000:127.0.0.1:18080 -i C:\Users\aghose\.ssh\ssh-key-2025-09-27.key solty@192.168.0.50
+ssh -N -L 18000:127.0.0.1:18080 -i C:\path\to\ssh-key user@your-server
 ```
 
 다른 터미널에서:
@@ -109,7 +138,7 @@ tailscale serve status
 차트별 비교와 적용 근거는 [CHART_RESEARCH.md](CHART_RESEARCH.md)에 정리했습니다.
 
 - [POE2Scout](https://github.com/poe2scout/poe2scout): 화폐 교환 스냅샷은 공식 과거 집계를 기반으로 시간 단위로 생성합니다. API의 `Currencies/{apiId}` 가격 로그를 참고 가격 카드에 연결했습니다.
-- [poe2-currency-exchange-check](https://github.com/iheanyi/poe2-currency-exchange-check): 스냅샷 조회의 60초 캐시, 요청 합치기, 호스트별 제한 방식을 검토했습니다. 이 앱은 브라우저 요청을 Python 서버로 모으고, poe.ninja 요청은 최소 10분 간격으로 캐시합니다.
+- [poe2-currency-exchange-check](https://github.com/iheanyi/poe2-currency-exchange-check): 스냅샷 조회의 60초 캐시, 요청 합치기, 호스트별 제한 방식을 검토했습니다. 이 앱은 브라우저 요청을 Python 서버로 모으고, 전체 분류와 선택 분류의 갱신 주기를 분리합니다. 현재 설정은 데이터 의미 절을 참고하세요.
 - [MaxOverlay-POE2](https://github.com/MaxDistroyer/MaxOverlay-POE2): 아이템 단건 가격 조회와 캐시 구조를 확인했습니다. 화면 OCR과 거래 사이트 조회 기능은 이 시세 차트의 범위에 포함되지 않습니다.
 
 한국어 아이템 표시는 [seominugi/poe-game-data](https://github.com/seominugi/poe-game-data)의 PoE2 `kr` 표시명 사전과 유니크 아이템 데이터(`v2026.09.17.2`)를 사용합니다. 영어 문자열을 임의로 번역하지 않고 게임 데이터의 한국어 표기를 우선하며, 데이터에 없는 문자열만 원문을 유지합니다.
